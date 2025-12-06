@@ -1,13 +1,11 @@
-"""
-URL configuration for stories app.
-"""
-
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views
+from .views import StoryViewSet, StoryHighlightViewSet, StoryReplyViewSet
 
 router = DefaultRouter()
-router.register(r'', views.StoryViewSet, basename='story')
+router.register(r'highlights', StoryHighlightViewSet, basename='highlight')
+router.register(r'replies', StoryReplyViewSet, basename='reply')
+router.register(r'', StoryViewSet, basename='story')
 
 urlpatterns = [
     path('', include(router.urls)),

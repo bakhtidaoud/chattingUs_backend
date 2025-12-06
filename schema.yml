@@ -1,0 +1,5367 @@
+openapi: 3.0.3
+info:
+  title: ChattingUs API
+  version: 1.0.0
+  description: API documentation for ChattingUs backend including WebSocket protocol
+    details.
+paths:
+  /api/chat/chats/:
+    get:
+      operationId: chat_chats_list
+      description: ViewSet for Chat model.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - chat
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedChatList'
+          description: ''
+    post:
+      operationId: chat_chats_create
+      description: ViewSet for Chat model.
+      tags:
+      - chat
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chat'
+          description: ''
+  /api/chat/chats/{id}/:
+    get:
+      operationId: chat_chats_retrieve
+      description: ViewSet for Chat model.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - chat
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chat'
+          description: ''
+    put:
+      operationId: chat_chats_update
+      description: ViewSet for Chat model.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - chat
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chat'
+          description: ''
+    patch:
+      operationId: chat_chats_partial_update
+      description: ViewSet for Chat model.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - chat
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedChatRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedChatRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedChatRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chat'
+          description: ''
+    delete:
+      operationId: chat_chats_destroy
+      description: ViewSet for Chat model.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - chat
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/chat/chats/{id}/mark_read/:
+    post:
+      operationId: chat_chats_mark_read_create
+      description: Mark all messages in a chat as read.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - chat
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chat'
+          description: ''
+  /api/chat/chats/{id}/messages/:
+    get:
+      operationId: chat_chats_messages_retrieve
+      description: Get messages for a chat (paginated).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - chat
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chat'
+          description: ''
+  /api/chat/chats/{id}/share-reel/:
+    post:
+      operationId: chat_chats_share_reel_create
+      description: Share a reel in the chat.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - chat
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chat'
+          description: ''
+  /api/chat/messages/:
+    get:
+      operationId: chat_messages_list
+      description: ViewSet for Message model.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - chat
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMessageList'
+          description: ''
+    post:
+      operationId: chat_messages_create
+      description: ViewSet for Message model.
+      tags:
+      - chat
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MessageRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MessageRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+  /api/chat/messages/{id}/:
+    get:
+      operationId: chat_messages_retrieve
+      description: ViewSet for Message model.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - chat
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+    put:
+      operationId: chat_messages_update
+      description: ViewSet for Message model.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - chat
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MessageRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MessageRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+    patch:
+      operationId: chat_messages_partial_update
+      description: ViewSet for Message model.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - chat
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedMessageRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedMessageRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedMessageRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+    delete:
+      operationId: chat_messages_destroy
+      description: Delete message. Check for 'delete for everyone' time limit.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - chat
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/chat/messages/{id}/react/:
+    post:
+      operationId: chat_messages_react_create
+      description: Add a reaction to a message.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - chat
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MessageRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MessageRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+  /api/chat/messages/{id}/read/:
+    put:
+      operationId: chat_messages_read_update
+      description: Mark message as read.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - chat
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MessageRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MessageRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+  /api/explore/:
+    get:
+      operationId: explore_retrieve
+      description: Get explore feed (mix of posts and reels).
+      tags:
+      - explore
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/explore/hashtags/:
+    get:
+      operationId: explore_hashtags_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - explore
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedHashtagList'
+          description: ''
+  /api/explore/hashtags/{name}/:
+    get:
+      operationId: explore_hashtags_retrieve
+      parameters:
+      - in: path
+        name: name
+        schema:
+          type: string
+        required: true
+      tags:
+      - explore
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hashtag'
+          description: ''
+  /api/explore/hashtags/{name}/posts/:
+    get:
+      operationId: explore_hashtags_posts_retrieve
+      parameters:
+      - in: path
+        name: name
+        schema:
+          type: string
+        required: true
+      tags:
+      - explore
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hashtag'
+          description: ''
+  /api/explore/hashtags/{name}/reels/:
+    get:
+      operationId: explore_hashtags_reels_retrieve
+      parameters:
+      - in: path
+        name: name
+        schema:
+          type: string
+        required: true
+      tags:
+      - explore
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hashtag'
+          description: ''
+  /api/explore/search/:
+    get:
+      operationId: explore_search_retrieve
+      description: Search for users, posts, reels, hashtags.
+      tags:
+      - explore
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/explore/trending/:
+    get:
+      operationId: explore_trending_retrieve
+      description: Get trending content.
+      tags:
+      - explore
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/media/:
+    get:
+      operationId: media_list
+      description: |-
+        ViewSet for Media model.
+
+        Endpoints:
+        - POST /api/media/upload/ - Upload media file
+        - GET /api/media/ - List user's media files
+        - GET /api/media/{id}/ - Get media details
+        - DELETE /api/media/{id}/ - Delete media file
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - media
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMediaListList'
+          description: ''
+    post:
+      operationId: media_create
+      description: |-
+        ViewSet for Media model.
+
+        Endpoints:
+        - POST /api/media/upload/ - Upload media file
+        - GET /api/media/ - List user's media files
+        - GET /api/media/{id}/ - Get media details
+        - DELETE /api/media/{id}/ - Delete media file
+      tags:
+      - media
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MediaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MediaRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Media'
+          description: ''
+  /api/media/{id}/:
+    get:
+      operationId: media_retrieve
+      description: Get media details.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Media File.
+        required: true
+      tags:
+      - media
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Media'
+          description: ''
+    put:
+      operationId: media_update
+      description: |-
+        ViewSet for Media model.
+
+        Endpoints:
+        - POST /api/media/upload/ - Upload media file
+        - GET /api/media/ - List user's media files
+        - GET /api/media/{id}/ - Get media details
+        - DELETE /api/media/{id}/ - Delete media file
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Media File.
+        required: true
+      tags:
+      - media
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MediaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MediaRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Media'
+          description: ''
+    patch:
+      operationId: media_partial_update
+      description: |-
+        ViewSet for Media model.
+
+        Endpoints:
+        - POST /api/media/upload/ - Upload media file
+        - GET /api/media/ - List user's media files
+        - GET /api/media/{id}/ - Get media details
+        - DELETE /api/media/{id}/ - Delete media file
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Media File.
+        required: true
+      tags:
+      - media
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedMediaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedMediaRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Media'
+          description: ''
+    delete:
+      operationId: media_destroy
+      description: Delete media file.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Media File.
+        required: true
+      tags:
+      - media
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/media/{id}/reprocess/:
+    post:
+      operationId: media_reprocess_create
+      description: Reprocess a failed media file.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Media File.
+        required: true
+      tags:
+      - media
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MediaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MediaRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Media'
+          description: ''
+  /api/media/stats/:
+    get:
+      operationId: media_stats_retrieve
+      description: Get media statistics for the user.
+      tags:
+      - media
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Media'
+          description: ''
+  /api/media/upload/:
+    post:
+      operationId: media_upload_create
+      description: |-
+        Upload a media file.
+
+        Request:
+            - file: The media file to upload
+
+        Response:
+            - Media object with processing status
+      tags:
+      - media
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MediaUploadRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MediaUploadRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/notifications/:
+    get:
+      operationId: notifications_list
+      description: |-
+        ViewSet for Notification model.
+
+        Endpoints:
+        - GET /api/notifications/ - List all notifications
+        - GET /api/notifications/{id}/ - Get single notification
+        - PUT /api/notifications/{id}/read/ - Mark notification as read
+        - PUT /api/notifications/read-all/ - Mark all notifications as read
+        - DELETE /api/notifications/{id}/ - Delete notification
+        - GET /api/notifications/unread-count/ - Get unread notification count
+        - GET /api/notifications/grouped/ - Get grouped notifications
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotificationList'
+          description: ''
+    post:
+      operationId: notifications_create
+      description: |-
+        ViewSet for Notification model.
+
+        Endpoints:
+        - GET /api/notifications/ - List all notifications
+        - GET /api/notifications/{id}/ - Get single notification
+        - PUT /api/notifications/{id}/read/ - Mark notification as read
+        - PUT /api/notifications/read-all/ - Mark all notifications as read
+        - DELETE /api/notifications/{id}/ - Delete notification
+        - GET /api/notifications/unread-count/ - Get unread notification count
+        - GET /api/notifications/grouped/ - Get grouped notifications
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+  /api/notifications/{id}/:
+    get:
+      operationId: notifications_retrieve
+      description: |-
+        ViewSet for Notification model.
+
+        Endpoints:
+        - GET /api/notifications/ - List all notifications
+        - GET /api/notifications/{id}/ - Get single notification
+        - PUT /api/notifications/{id}/read/ - Mark notification as read
+        - PUT /api/notifications/read-all/ - Mark all notifications as read
+        - DELETE /api/notifications/{id}/ - Delete notification
+        - GET /api/notifications/unread-count/ - Get unread notification count
+        - GET /api/notifications/grouped/ - Get grouped notifications
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this notification.
+        required: true
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+    put:
+      operationId: notifications_update
+      description: |-
+        ViewSet for Notification model.
+
+        Endpoints:
+        - GET /api/notifications/ - List all notifications
+        - GET /api/notifications/{id}/ - Get single notification
+        - PUT /api/notifications/{id}/read/ - Mark notification as read
+        - PUT /api/notifications/read-all/ - Mark all notifications as read
+        - DELETE /api/notifications/{id}/ - Delete notification
+        - GET /api/notifications/unread-count/ - Get unread notification count
+        - GET /api/notifications/grouped/ - Get grouped notifications
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this notification.
+        required: true
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+    patch:
+      operationId: notifications_partial_update
+      description: |-
+        ViewSet for Notification model.
+
+        Endpoints:
+        - GET /api/notifications/ - List all notifications
+        - GET /api/notifications/{id}/ - Get single notification
+        - PUT /api/notifications/{id}/read/ - Mark notification as read
+        - PUT /api/notifications/read-all/ - Mark all notifications as read
+        - DELETE /api/notifications/{id}/ - Delete notification
+        - GET /api/notifications/unread-count/ - Get unread notification count
+        - GET /api/notifications/grouped/ - Get grouped notifications
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this notification.
+        required: true
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+    delete:
+      operationId: notifications_destroy
+      description: Delete a notification.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this notification.
+        required: true
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/notifications/{id}/read/:
+    put:
+      operationId: notifications_read_update
+      description: Mark a single notification as read.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this notification.
+        required: true
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+  /api/notifications/grouped/:
+    get:
+      operationId: notifications_grouped_retrieve
+      description: Get grouped notifications.
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+  /api/notifications/mark-all-read/:
+    put:
+      operationId: notifications_mark_all_read_update
+      description: Alias for read_all - Mark all notifications as read.
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+  /api/notifications/preferences/:
+    get:
+      operationId: notifications_preferences_list
+      description: Get user's notification preferences.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotificationPreferenceList'
+          description: ''
+    post:
+      operationId: notifications_preferences_create
+      description: |-
+        ViewSet for NotificationPreference model.
+
+        Endpoints:
+        - GET /api/notifications/preferences/ - Get user preferences
+        - PUT /api/notifications/preferences/{id}/ - Update preferences
+        - PATCH /api/notifications/preferences/{id}/ - Partial update preferences
+        - POST /api/notifications/preferences/add-fcm-token/ - Add FCM token
+        - POST /api/notifications/preferences/remove-fcm-token/ - Remove FCM token
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationPreferenceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NotificationPreferenceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotificationPreferenceRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreference'
+          description: ''
+  /api/notifications/preferences/{id}/:
+    get:
+      operationId: notifications_preferences_retrieve
+      description: |-
+        ViewSet for NotificationPreference model.
+
+        Endpoints:
+        - GET /api/notifications/preferences/ - Get user preferences
+        - PUT /api/notifications/preferences/{id}/ - Update preferences
+        - PATCH /api/notifications/preferences/{id}/ - Partial update preferences
+        - POST /api/notifications/preferences/add-fcm-token/ - Add FCM token
+        - POST /api/notifications/preferences/remove-fcm-token/ - Remove FCM token
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Notification Preference.
+        required: true
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreference'
+          description: ''
+    put:
+      operationId: notifications_preferences_update
+      description: |-
+        ViewSet for NotificationPreference model.
+
+        Endpoints:
+        - GET /api/notifications/preferences/ - Get user preferences
+        - PUT /api/notifications/preferences/{id}/ - Update preferences
+        - PATCH /api/notifications/preferences/{id}/ - Partial update preferences
+        - POST /api/notifications/preferences/add-fcm-token/ - Add FCM token
+        - POST /api/notifications/preferences/remove-fcm-token/ - Remove FCM token
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Notification Preference.
+        required: true
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationPreferenceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NotificationPreferenceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotificationPreferenceRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreference'
+          description: ''
+    patch:
+      operationId: notifications_preferences_partial_update
+      description: |-
+        ViewSet for NotificationPreference model.
+
+        Endpoints:
+        - GET /api/notifications/preferences/ - Get user preferences
+        - PUT /api/notifications/preferences/{id}/ - Update preferences
+        - PATCH /api/notifications/preferences/{id}/ - Partial update preferences
+        - POST /api/notifications/preferences/add-fcm-token/ - Add FCM token
+        - POST /api/notifications/preferences/remove-fcm-token/ - Remove FCM token
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Notification Preference.
+        required: true
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationPreferenceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationPreferenceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationPreferenceRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreference'
+          description: ''
+    delete:
+      operationId: notifications_preferences_destroy
+      description: |-
+        ViewSet for NotificationPreference model.
+
+        Endpoints:
+        - GET /api/notifications/preferences/ - Get user preferences
+        - PUT /api/notifications/preferences/{id}/ - Update preferences
+        - PATCH /api/notifications/preferences/{id}/ - Partial update preferences
+        - POST /api/notifications/preferences/add-fcm-token/ - Add FCM token
+        - POST /api/notifications/preferences/remove-fcm-token/ - Remove FCM token
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Notification Preference.
+        required: true
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/notifications/preferences/add_fcm_token/:
+    post:
+      operationId: notifications_preferences_add_fcm_token_create
+      description: Add FCM token for push notifications.
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationPreferenceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NotificationPreferenceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotificationPreferenceRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreference'
+          description: ''
+  /api/notifications/preferences/remove_fcm_token/:
+    post:
+      operationId: notifications_preferences_remove_fcm_token_create
+      description: Remove FCM token.
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationPreferenceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NotificationPreferenceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotificationPreferenceRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreference'
+          description: ''
+  /api/notifications/read-all/:
+    put:
+      operationId: notifications_read_all_update
+      description: Mark all notifications as read.
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+  /api/notifications/unread-count/:
+    get:
+      operationId: notifications_unread_count_retrieve
+      description: Get count of unread notifications.
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+  /api/posts/:
+    get:
+      operationId: posts_list
+      description: ViewSet for Post model with feed algorithm.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - posts
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPostList'
+          description: ''
+    post:
+      operationId: posts_create
+      description: ViewSet for Post model with feed algorithm.
+      tags:
+      - posts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePostRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreatePostRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreatePostRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatePost'
+          description: ''
+  /api/posts/{id}/:
+    get:
+      operationId: posts_retrieve
+      description: ViewSet for Post model with feed algorithm.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this post.
+        required: true
+      tags:
+      - posts
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+          description: ''
+    put:
+      operationId: posts_update
+      description: ViewSet for Post model with feed algorithm.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this post.
+        required: true
+      tags:
+      - posts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePostRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UpdatePostRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UpdatePostRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdatePost'
+          description: ''
+    patch:
+      operationId: posts_partial_update
+      description: ViewSet for Post model with feed algorithm.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this post.
+        required: true
+      tags:
+      - posts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdatePostRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdatePostRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdatePostRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdatePost'
+          description: ''
+    delete:
+      operationId: posts_destroy
+      description: ViewSet for Post model with feed algorithm.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this post.
+        required: true
+      tags:
+      - posts
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/posts/{id}/archive/:
+    post:
+      operationId: posts_archive_create
+      description: Archive/unarchive a post.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this post.
+        required: true
+      tags:
+      - posts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PostRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PostRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+          description: ''
+  /api/posts/{id}/like/:
+    post:
+      operationId: posts_like_create
+      description: Like a post.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this post.
+        required: true
+      tags:
+      - posts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PostRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PostRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+          description: ''
+  /api/posts/{id}/likes/:
+    get:
+      operationId: posts_likes_retrieve
+      description: Get list of users who liked the post.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this post.
+        required: true
+      tags:
+      - posts
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+          description: ''
+  /api/posts/{id}/unlike/:
+    delete:
+      operationId: posts_unlike_destroy
+      description: Unlike a post.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this post.
+        required: true
+      tags:
+      - posts
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/posts/{post_pk}/comments/:
+    get:
+      operationId: posts_comments_list
+      description: ViewSet for Comment model with nested replies.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: path
+        name: post_pk
+        schema:
+          type: integer
+        required: true
+      tags:
+      - posts
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCommentList'
+          description: ''
+    post:
+      operationId: posts_comments_create
+      description: Create a comment on a post.
+      parameters:
+      - in: path
+        name: post_pk
+        schema:
+          type: integer
+        required: true
+      tags:
+      - posts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCommentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateCommentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateCommentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateComment'
+          description: ''
+  /api/posts/{post_pk}/comments/{id}/:
+    get:
+      operationId: posts_comments_retrieve
+      description: ViewSet for Comment model with nested replies.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this comment.
+        required: true
+      - in: path
+        name: post_pk
+        schema:
+          type: integer
+        required: true
+      tags:
+      - posts
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+          description: ''
+    put:
+      operationId: posts_comments_update
+      description: Update a comment.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this comment.
+        required: true
+      - in: path
+        name: post_pk
+        schema:
+          type: integer
+        required: true
+      tags:
+      - posts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CommentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CommentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+          description: ''
+    patch:
+      operationId: posts_comments_partial_update
+      description: ViewSet for Comment model with nested replies.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this comment.
+        required: true
+      - in: path
+        name: post_pk
+        schema:
+          type: integer
+        required: true
+      tags:
+      - posts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCommentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCommentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCommentRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+          description: ''
+    delete:
+      operationId: posts_comments_destroy
+      description: Delete a comment.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this comment.
+        required: true
+      - in: path
+        name: post_pk
+        schema:
+          type: integer
+        required: true
+      tags:
+      - posts
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/posts/{post_pk}/comments/{id}/like/:
+    post:
+      operationId: posts_comments_like_create
+      description: Like a comment.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this comment.
+        required: true
+      - in: path
+        name: post_pk
+        schema:
+          type: integer
+        required: true
+      tags:
+      - posts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CommentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CommentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+          description: ''
+  /api/posts/{post_pk}/comments/{id}/likes/:
+    get:
+      operationId: posts_comments_likes_retrieve
+      description: Get users who liked the comment.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this comment.
+        required: true
+      - in: path
+        name: post_pk
+        schema:
+          type: integer
+        required: true
+      tags:
+      - posts
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+          description: ''
+  /api/posts/{post_pk}/comments/{id}/reply/:
+    post:
+      operationId: posts_comments_reply_create
+      description: Reply to a comment.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this comment.
+        required: true
+      - in: path
+        name: post_pk
+        schema:
+          type: integer
+        required: true
+      tags:
+      - posts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CommentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CommentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+          description: ''
+  /api/posts/{post_pk}/comments/{id}/unlike/:
+    delete:
+      operationId: posts_comments_unlike_destroy
+      description: Unlike a comment.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this comment.
+        required: true
+      - in: path
+        name: post_pk
+        schema:
+          type: integer
+        required: true
+      tags:
+      - posts
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/posts/archived/:
+    get:
+      operationId: posts_archived_retrieve
+      description: Get current user's archived posts.
+      tags:
+      - posts
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+          description: ''
+  /api/posts/my_posts/:
+    get:
+      operationId: posts_my_posts_retrieve
+      description: Get current user's posts (including archived).
+      tags:
+      - posts
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+          description: ''
+  /api/reels/:
+    get:
+      operationId: reels_list
+      description: |-
+        Get reels feed (infinite scroll).
+        For now, just return latest reels.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - reels
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedReelList'
+          description: ''
+    post:
+      operationId: reels_create
+      description: ViewSet for Reel model.
+      tags:
+      - reels
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReelRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReelRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReelRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reel'
+          description: ''
+  /api/reels/{id}/:
+    get:
+      operationId: reels_retrieve
+      description: ViewSet for Reel model.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this reel.
+        required: true
+      tags:
+      - reels
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reel'
+          description: ''
+    put:
+      operationId: reels_update
+      description: ViewSet for Reel model.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this reel.
+        required: true
+      tags:
+      - reels
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReelRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReelRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReelRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reel'
+          description: ''
+    patch:
+      operationId: reels_partial_update
+      description: ViewSet for Reel model.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this reel.
+        required: true
+      tags:
+      - reels
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedReelRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedReelRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedReelRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reel'
+          description: ''
+    delete:
+      operationId: reels_destroy
+      description: ViewSet for Reel model.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this reel.
+        required: true
+      tags:
+      - reels
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/reels/{id}/like/:
+    post:
+      operationId: reels_like_create
+      description: Like a reel.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this reel.
+        required: true
+      tags:
+      - reels
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReelRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReelRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReelRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reel'
+          description: ''
+  /api/reels/{id}/unlike/:
+    post:
+      operationId: reels_unlike_create
+      description: Unlike a reel.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this reel.
+        required: true
+      tags:
+      - reels
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReelRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReelRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReelRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reel'
+          description: ''
+  /api/reels/{id}/view/:
+    post:
+      operationId: reels_view_create
+      description: Increment view count.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this reel.
+        required: true
+      tags:
+      - reels
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReelRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReelRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReelRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reel'
+          description: ''
+  /api/reels/trending/:
+    get:
+      operationId: reels_trending_retrieve
+      description: Get trending reels based on engagement.
+      tags:
+      - reels
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reel'
+          description: ''
+  /api/security/2fa/:
+    get:
+      operationId: security_2fa_retrieve
+      description: Get 2FA status for current user.
+      tags:
+      - security
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/security/2fa-login/verify/:
+    post:
+      operationId: security_2fa_login_verify_create
+      description: |-
+        Verify 2FA token during login.
+        This should be called after successful username/password authentication.
+      tags:
+      - security
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/security/2fa/backup_codes/:
+    get:
+      operationId: security_2fa_backup_codes_retrieve
+      description: Get unused backup codes for user.
+      tags:
+      - security
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/security/2fa/disable/:
+    post:
+      operationId: security_2fa_disable_create
+      description: |-
+        Disable 2FA for user.
+        Requires password confirmation.
+      tags:
+      - security
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/security/2fa/enable/:
+    post:
+      operationId: security_2fa_enable_create
+      description: |-
+        Enable 2FA for user.
+        Generates secret key and returns QR code.
+      tags:
+      - security
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/security/2fa/regenerate_codes/:
+    post:
+      operationId: security_2fa_regenerate_codes_create
+      description: |-
+        Regenerate backup codes.
+        Requires password confirmation.
+      tags:
+      - security
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/security/2fa/verify/:
+    post:
+      operationId: security_2fa_verify_create
+      description: Verify 2FA token and complete setup.
+      tags:
+      - security
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/stories/:
+    get:
+      operationId: stories_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - stories
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedStoryList'
+          description: ''
+    post:
+      operationId: stories_create
+      tags:
+      - stories
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoryRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StoryRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StoryRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Story'
+          description: ''
+  /api/stories/{id}/:
+    get:
+      operationId: stories_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this story.
+        required: true
+      tags:
+      - stories
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Story'
+          description: ''
+    put:
+      operationId: stories_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this story.
+        required: true
+      tags:
+      - stories
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoryRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StoryRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StoryRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Story'
+          description: ''
+    patch:
+      operationId: stories_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this story.
+        required: true
+      tags:
+      - stories
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedStoryRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedStoryRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedStoryRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Story'
+          description: ''
+    delete:
+      operationId: stories_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this story.
+        required: true
+      tags:
+      - stories
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/stories/{id}/view/:
+    post:
+      operationId: stories_view_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this story.
+        required: true
+      tags:
+      - stories
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoryRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StoryRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StoryRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Story'
+          description: ''
+  /api/stories/{id}/viewers/:
+    get:
+      operationId: stories_viewers_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this story.
+        required: true
+      tags:
+      - stories
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Story'
+          description: ''
+  /api/stories/highlights/:
+    get:
+      operationId: stories_highlights_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - stories
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedStoryHighlightList'
+          description: ''
+    post:
+      operationId: stories_highlights_create
+      tags:
+      - stories
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoryHighlightRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StoryHighlightRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StoryHighlightRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoryHighlight'
+          description: ''
+  /api/stories/highlights/{id}/:
+    get:
+      operationId: stories_highlights_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this story highlight.
+        required: true
+      tags:
+      - stories
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoryHighlight'
+          description: ''
+    put:
+      operationId: stories_highlights_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this story highlight.
+        required: true
+      tags:
+      - stories
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoryHighlightRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StoryHighlightRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StoryHighlightRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoryHighlight'
+          description: ''
+    patch:
+      operationId: stories_highlights_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this story highlight.
+        required: true
+      tags:
+      - stories
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedStoryHighlightRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedStoryHighlightRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedStoryHighlightRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoryHighlight'
+          description: ''
+    delete:
+      operationId: stories_highlights_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this story highlight.
+        required: true
+      tags:
+      - stories
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/stories/replies/:
+    get:
+      operationId: stories_replies_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - stories
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedStoryReplyList'
+          description: ''
+    post:
+      operationId: stories_replies_create
+      tags:
+      - stories
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoryReplyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StoryReplyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StoryReplyRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoryReply'
+          description: ''
+  /api/stories/replies/{id}/:
+    get:
+      operationId: stories_replies_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this story reply.
+        required: true
+      tags:
+      - stories
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoryReply'
+          description: ''
+    put:
+      operationId: stories_replies_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this story reply.
+        required: true
+      tags:
+      - stories
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoryReplyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StoryReplyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StoryReplyRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoryReply'
+          description: ''
+    patch:
+      operationId: stories_replies_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this story reply.
+        required: true
+      tags:
+      - stories
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedStoryReplyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedStoryReplyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedStoryReplyRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoryReply'
+          description: ''
+    delete:
+      operationId: stories_replies_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this story reply.
+        required: true
+      tags:
+      - stories
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/stories/user/{user_id}/:
+    get:
+      operationId: stories_user_retrieve
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - stories
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Story'
+          description: ''
+  /api/token/:
+    post:
+      operationId: token_create
+      description: |-
+        Takes a set of user credentials and returns an access and refresh JSON web
+        token pair to prove the authentication of those credentials.
+      tags:
+      - token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenObtainPair'
+          description: ''
+  /api/token/refresh/:
+    post:
+      operationId: token_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/token/verify/:
+    post:
+      operationId: token_verify_create
+      description: |-
+        Takes a token and indicates if it is valid.  This view provides no
+        information about a token's fitness for a particular use.
+      tags:
+      - token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenVerifyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenVerifyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenVerifyRequest'
+        required: true
+      responses:
+        '200':
+          description: No response body
+  /api/users/:
+    get:
+      operationId: users_list
+      description: ViewSet for User model.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUserList'
+          description: ''
+    post:
+      operationId: users_create
+      description: ViewSet for User model.
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/users/{id}/:
+    get:
+      operationId: users_retrieve
+      description: ViewSet for User model.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    patch:
+      operationId: users_partial_update
+      description: Partially update user profile.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    delete:
+      operationId: users_destroy
+      description: ViewSet for User model.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/users/{id}/follow/:
+    post:
+      operationId: users_follow_create
+      description: Follow a user.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/users/{id}/unfollow/:
+    post:
+      operationId: users_unfollow_create
+      description: Unfollow a user.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/users/{user_id}/block/:
+    post:
+      operationId: users_block_create
+      description: Block a user.
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/users/{user_id}/follow/:
+    post:
+      operationId: users_follow_create_2
+      description: Follow a user.
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/users/{user_id}/unblock/:
+    delete:
+      operationId: users_unblock_destroy
+      description: Unblock a user.
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/users/{user_id}/unfollow/:
+    delete:
+      operationId: users_unfollow_destroy
+      description: Unfollow a user.
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/users/{username}/:
+    get:
+      operationId: users_retrieve_2
+      description: Get public profile by username.
+      parameters:
+      - in: path
+        name: username
+        schema:
+          type: string
+        required: true
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/users/auth/forgot-password/:
+    post:
+      operationId: users_auth_forgot_password_create
+      description: |-
+        API view for forgot password - accepts email, username, or phone.
+        Sends reset link for mobile app deep linking.
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/users/auth/reset-password/:
+    post:
+      operationId: users_auth_reset_password_create
+      description: Reset the user's password using a valid token.
+      summary: Reset password
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/users/auth/verify-reset-token/{token}/:
+    get:
+      operationId: users_auth_verify_reset_token_retrieve
+      description: Check if the password reset token is valid and not expired.
+      summary: Verify reset token
+      parameters:
+      - in: path
+        name: token
+        schema:
+          type: string
+        description: Password reset token
+        required: true
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/users/blocked/:
+    get:
+      operationId: users_blocked_retrieve
+      description: Get list of blocked users.
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/users/change-password/:
+    post:
+      operationId: users_change_password_create
+      description: Change the authenticated user's password.
+      summary: Change password
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/users/followers/:
+    get:
+      operationId: users_followers_retrieve
+      description: Get list of followers.
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/users/following/:
+    get:
+      operationId: users_following_retrieve
+      description: Get list of users being followed.
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/users/login/:
+    post:
+      operationId: users_login_create
+      description: Login with email, username, or phone number and password.
+      summary: Login user
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/users/logout/:
+    post:
+      operationId: users_logout_create
+      description: Blacklist the refresh token to logout the user.
+      summary: Logout user
+      parameters:
+      - in: query
+        name: refresh
+        schema:
+          type: string
+        description: Refresh token to blacklist
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/users/me/:
+    get:
+      operationId: users_me_retrieve
+      description: Get current user profile.
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/users/password-reset/:
+    post:
+      operationId: users_password_reset_create
+      description: Legacy API view for password reset request (kept for backward compatibility).
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/users/password-reset/confirm/:
+    post:
+      operationId: users_password_reset_confirm_create
+      description: Legacy API view for confirming password reset (kept for backward
+        compatibility).
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/users/profile/:
+    get:
+      operationId: users_profile_retrieve
+      description: Get current user's full profile.
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+    put:
+      operationId: users_profile_update
+      description: Update user profile.
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/users/profile/picture/:
+    post:
+      operationId: users_profile_picture_create
+      description: Upload and compress profile picture.
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/users/register/:
+    post:
+      operationId: users_register_create
+      description: Register a new user with email, username, password, and optional
+        phone number.
+      summary: Register a new user
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/users/resend-verification/:
+    post:
+      operationId: users_resend_verification_create
+      description: Resend the email or phone verification code.
+      summary: Resend verification
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/users/search/:
+    get:
+      operationId: users_search_retrieve
+      description: Search users by username, first name, or last name.
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/users/verify-email/:
+    get:
+      operationId: users_verify_email_retrieve
+      description: Verify the user's email address using a token.
+      summary: Verify email
+      parameters:
+      - in: query
+        name: token
+        schema:
+          type: string
+        description: Email verification token
+        required: true
+      tags:
+      - users
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/users/verify-phone/:
+    post:
+      operationId: users_verify_phone_create
+      description: Verify the user's phone number using a code.
+      summary: Verify phone number
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PhoneVerificationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PhoneVerificationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PhoneVerificationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+components:
+  schemas:
+    ChangePasswordRequest:
+      type: object
+      description: Serializer for changing password.
+      properties:
+        old_password:
+          type: string
+          writeOnly: true
+          minLength: 1
+        new_password:
+          type: string
+          writeOnly: true
+          minLength: 1
+        new_password2:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - new_password
+      - new_password2
+      - old_password
+    Chat:
+      type: object
+      description: Serializer for Chat model.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        participants:
+          type: array
+          items:
+            type: integer
+        participants_usernames:
+          type: string
+          readOnly: true
+        last_message:
+          type: string
+          readOnly: true
+        is_group:
+          type: boolean
+        group_name:
+          type: string
+          nullable: true
+          maxLength: 100
+        group_image:
+          type: string
+          format: uri
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - last_message
+      - participants
+      - participants_usernames
+      - updated_at
+    ChatRequest:
+      type: object
+      description: Serializer for Chat model.
+      properties:
+        participants:
+          type: array
+          items:
+            type: integer
+        is_group:
+          type: boolean
+        group_name:
+          type: string
+          nullable: true
+          maxLength: 100
+        group_image:
+          type: string
+          format: binary
+          nullable: true
+      required:
+      - participants
+    Comment:
+      type: object
+      description: Serializer for Comment model with nested replies.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          allOf:
+          - $ref: '#/components/schemas/PublicUser'
+          readOnly: true
+        post:
+          type: integer
+        text:
+          type: string
+          maxLength: 500
+        parent_comment:
+          type: integer
+          nullable: true
+        likes_count:
+          type: integer
+          readOnly: true
+        replies:
+          type: string
+          readOnly: true
+        is_liked:
+          type: string
+          readOnly: true
+        reply_level:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - is_liked
+      - likes_count
+      - post
+      - replies
+      - reply_level
+      - text
+      - user
+    CommentRequest:
+      type: object
+      description: Serializer for Comment model with nested replies.
+      properties:
+        post:
+          type: integer
+        text:
+          type: string
+          minLength: 1
+          maxLength: 500
+        parent_comment:
+          type: integer
+          nullable: true
+      required:
+      - post
+      - text
+    CreateComment:
+      type: object
+      description: Serializer for creating comments.
+      properties:
+        text:
+          type: string
+          maxLength: 500
+        parent_comment:
+          type: integer
+          nullable: true
+      required:
+      - text
+    CreateCommentRequest:
+      type: object
+      description: Serializer for creating comments.
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 500
+        parent_comment:
+          type: integer
+          nullable: true
+      required:
+      - text
+    CreatePost:
+      type: object
+      description: Serializer for creating posts.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        image:
+          type: string
+          format: uri
+          nullable: true
+        caption:
+          type: string
+        location:
+          type: string
+          maxLength: 200
+      required:
+      - id
+    CreatePostRequest:
+      type: object
+      description: Serializer for creating posts.
+      properties:
+        image:
+          type: string
+          format: binary
+          nullable: true
+        caption:
+          type: string
+        location:
+          type: string
+          maxLength: 200
+    FileTypeEnum:
+      enum:
+      - image
+      - video
+      - audio
+      type: string
+      description: |-
+        * `image` - Image
+        * `video` - Video
+        * `audio` - Audio
+    Hashtag:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        posts_count:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        reels_count:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - name
+    Media:
+      type: object
+      description: Serializer for Media model with all URLs.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          type: integer
+          readOnly: true
+        user_username:
+          type: string
+          readOnly: true
+        file_type:
+          allOf:
+          - $ref: '#/components/schemas/FileTypeEnum'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          readOnly: true
+        file_size:
+          type: integer
+          readOnly: true
+          description: File size in bytes
+        mime_type:
+          type: string
+          readOnly: true
+        display_url:
+          type: string
+          readOnly: true
+        thumbnail_url:
+          type: string
+          readOnly: true
+        urls:
+          type: string
+          readOnly: true
+        width:
+          type: integer
+          readOnly: true
+          nullable: true
+        height:
+          type: integer
+          readOnly: true
+          nullable: true
+        duration:
+          type: number
+          format: double
+          readOnly: true
+          nullable: true
+          description: Duration in seconds
+        bitrate:
+          type: integer
+          readOnly: true
+          nullable: true
+          description: Bitrate in kbps
+        metadata:
+          readOnly: true
+        is_public:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - bitrate
+      - created_at
+      - display_url
+      - duration
+      - file_size
+      - file_type
+      - height
+      - id
+      - metadata
+      - mime_type
+      - status
+      - thumbnail_url
+      - updated_at
+      - urls
+      - user
+      - user_username
+      - width
+    MediaList:
+      type: object
+      description: Lightweight serializer for listing media.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        file_type:
+          $ref: '#/components/schemas/FileTypeEnum'
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        display_url:
+          type: string
+          readOnly: true
+        thumbnail_url:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - display_url
+      - file_type
+      - id
+      - thumbnail_url
+    MediaRequest:
+      type: object
+      description: Serializer for Media model with all URLs.
+      properties:
+        is_public:
+          type: boolean
+    MediaTypeEnum:
+      enum:
+      - image
+      - video
+      type: string
+      description: |-
+        * `image` - Image
+        * `video` - Video
+    MediaUploadRequest:
+      type: object
+      description: Serializer for uploading media files.
+      properties:
+        file:
+          type: string
+          format: binary
+          writeOnly: true
+      required:
+      - file
+    Message:
+      type: object
+      description: Serializer for Message model.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        chat:
+          type: integer
+        sender:
+          type: integer
+          readOnly: true
+        sender_username:
+          type: string
+          readOnly: true
+        message_type:
+          $ref: '#/components/schemas/MessageTypeEnum'
+        content:
+          type: string
+          maxLength: 1000
+        media:
+          type: string
+          format: uri
+          nullable: true
+        is_read:
+          type: boolean
+        forwarded_from:
+          type: integer
+          readOnly: true
+          nullable: true
+        reactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reaction'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - chat
+      - created_at
+      - forwarded_from
+      - id
+      - reactions
+      - sender
+      - sender_username
+    MessageRequest:
+      type: object
+      description: Serializer for Message model.
+      properties:
+        chat:
+          type: integer
+        message_type:
+          $ref: '#/components/schemas/MessageTypeEnum'
+        content:
+          type: string
+          maxLength: 1000
+        media:
+          type: string
+          format: binary
+          nullable: true
+        is_read:
+          type: boolean
+        forwarded_from_id:
+          type: integer
+          writeOnly: true
+          nullable: true
+      required:
+      - chat
+    MessageTypeEnum:
+      enum:
+      - text
+      - image
+      - video
+      - audio
+      - voice
+      - reel
+      type: string
+      description: |-
+        * `text` - Text
+        * `image` - Image
+        * `video` - Video
+        * `audio` - Audio
+        * `voice` - Voice
+        * `reel` - Reel
+    Notification:
+      type: object
+      description: Serializer for Notification model.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        recipient:
+          type: integer
+          readOnly: true
+        sender:
+          type: integer
+          readOnly: true
+          nullable: true
+        sender_username:
+          type: string
+          readOnly: true
+          nullable: true
+        sender_profile_picture:
+          type: string
+          readOnly: true
+        sender_full_name:
+          type: string
+          readOnly: true
+        notification_type:
+          allOf:
+          - $ref: '#/components/schemas/NotificationTypeEnum'
+          readOnly: true
+        text:
+          type: string
+          readOnly: true
+        link:
+          type: string
+          readOnly: true
+        content_type:
+          type: integer
+          readOnly: true
+          nullable: true
+        object_id:
+          type: integer
+          readOnly: true
+          nullable: true
+        content_object_data:
+          type: string
+          readOnly: true
+        is_read:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        time_ago:
+          type: string
+          readOnly: true
+      required:
+      - content_object_data
+      - content_type
+      - created_at
+      - id
+      - link
+      - notification_type
+      - object_id
+      - recipient
+      - sender
+      - sender_full_name
+      - sender_profile_picture
+      - sender_username
+      - text
+      - time_ago
+    NotificationPreference:
+      type: object
+      description: Serializer for NotificationPreference model.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          type: integer
+          readOnly: true
+        like_push:
+          type: boolean
+        like_email:
+          type: boolean
+        like_in_app:
+          type: boolean
+        comment_push:
+          type: boolean
+        comment_email:
+          type: boolean
+        comment_in_app:
+          type: boolean
+        follow_push:
+          type: boolean
+        follow_email:
+          type: boolean
+        follow_in_app:
+          type: boolean
+        message_push:
+          type: boolean
+        message_email:
+          type: boolean
+        message_in_app:
+          type: boolean
+        mention_push:
+          type: boolean
+        mention_email:
+          type: boolean
+        mention_in_app:
+          type: boolean
+        fcm_tokens: {}
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - updated_at
+      - user
+    NotificationPreferenceRequest:
+      type: object
+      description: Serializer for NotificationPreference model.
+      properties:
+        like_push:
+          type: boolean
+        like_email:
+          type: boolean
+        like_in_app:
+          type: boolean
+        comment_push:
+          type: boolean
+        comment_email:
+          type: boolean
+        comment_in_app:
+          type: boolean
+        follow_push:
+          type: boolean
+        follow_email:
+          type: boolean
+        follow_in_app:
+          type: boolean
+        message_push:
+          type: boolean
+        message_email:
+          type: boolean
+        message_in_app:
+          type: boolean
+        mention_push:
+          type: boolean
+        mention_email:
+          type: boolean
+        mention_in_app:
+          type: boolean
+        fcm_tokens: {}
+    NotificationRequest:
+      type: object
+      description: Serializer for Notification model.
+      properties:
+        is_read:
+          type: boolean
+    NotificationTypeEnum:
+      enum:
+      - like
+      - comment
+      - follow
+      - message
+      - mention
+      type: string
+      description: |-
+        * `like` - Like
+        * `comment` - Comment
+        * `follow` - Follow
+        * `message` - Message
+        * `mention` - Mention
+    PaginatedChatList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Chat'
+    PaginatedCommentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Comment'
+    PaginatedHashtagList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Hashtag'
+    PaginatedMediaListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/MediaList'
+    PaginatedMessageList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+    PaginatedNotificationList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+    PaginatedNotificationPreferenceList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationPreference'
+    PaginatedPostList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Post'
+    PaginatedReelList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reel'
+    PaginatedStoryHighlightList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/StoryHighlight'
+    PaginatedStoryList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Story'
+    PaginatedStoryReplyList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/StoryReply'
+    PaginatedUserList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+    PasswordResetConfirmRequest:
+      type: object
+      description: Serializer for password reset confirmation.
+      properties:
+        token:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+        password2:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - password
+      - password2
+      - token
+    PatchedChatRequest:
+      type: object
+      description: Serializer for Chat model.
+      properties:
+        participants:
+          type: array
+          items:
+            type: integer
+        is_group:
+          type: boolean
+        group_name:
+          type: string
+          nullable: true
+          maxLength: 100
+        group_image:
+          type: string
+          format: binary
+          nullable: true
+    PatchedCommentRequest:
+      type: object
+      description: Serializer for Comment model with nested replies.
+      properties:
+        post:
+          type: integer
+        text:
+          type: string
+          minLength: 1
+          maxLength: 500
+        parent_comment:
+          type: integer
+          nullable: true
+    PatchedMediaRequest:
+      type: object
+      description: Serializer for Media model with all URLs.
+      properties:
+        is_public:
+          type: boolean
+    PatchedMessageRequest:
+      type: object
+      description: Serializer for Message model.
+      properties:
+        chat:
+          type: integer
+        message_type:
+          $ref: '#/components/schemas/MessageTypeEnum'
+        content:
+          type: string
+          maxLength: 1000
+        media:
+          type: string
+          format: binary
+          nullable: true
+        is_read:
+          type: boolean
+        forwarded_from_id:
+          type: integer
+          writeOnly: true
+          nullable: true
+    PatchedNotificationPreferenceRequest:
+      type: object
+      description: Serializer for NotificationPreference model.
+      properties:
+        like_push:
+          type: boolean
+        like_email:
+          type: boolean
+        like_in_app:
+          type: boolean
+        comment_push:
+          type: boolean
+        comment_email:
+          type: boolean
+        comment_in_app:
+          type: boolean
+        follow_push:
+          type: boolean
+        follow_email:
+          type: boolean
+        follow_in_app:
+          type: boolean
+        message_push:
+          type: boolean
+        message_email:
+          type: boolean
+        message_in_app:
+          type: boolean
+        mention_push:
+          type: boolean
+        mention_email:
+          type: boolean
+        mention_in_app:
+          type: boolean
+        fcm_tokens: {}
+    PatchedNotificationRequest:
+      type: object
+      description: Serializer for Notification model.
+      properties:
+        is_read:
+          type: boolean
+    PatchedReelRequest:
+      type: object
+      description: Serializer for Reel model.
+      properties:
+        video:
+          type: string
+          format: binary
+        caption:
+          type: string
+          maxLength: 2200
+    PatchedStoryHighlightRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        cover:
+          type: string
+          format: binary
+          nullable: true
+        story_ids:
+          type: array
+          items:
+            type: integer
+            writeOnly: true
+          writeOnly: true
+    PatchedStoryReplyRequest:
+      type: object
+      properties:
+        story:
+          type: integer
+        text:
+          type: string
+          minLength: 1
+    PatchedStoryRequest:
+      type: object
+      properties:
+        media:
+          type: string
+          format: binary
+          nullable: true
+        media_type:
+          $ref: '#/components/schemas/MediaTypeEnum'
+        text:
+          type: string
+          maxLength: 500
+        duration:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          description: Duration in seconds
+    PatchedUpdatePostRequest:
+      type: object
+      description: Serializer for updating posts.
+      properties:
+        caption:
+          type: string
+        location:
+          type: string
+          maxLength: 200
+    PatchedUserRequest:
+      type: object
+      description: Serializer for User model.
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        bio:
+          type: string
+          maxLength: 500
+        profile_picture:
+          type: string
+          format: binary
+          nullable: true
+        date_of_birth:
+          type: string
+          format: date
+          nullable: true
+        phone_number:
+          type: string
+          maxLength: 20
+        is_private:
+          type: boolean
+    PhoneVerificationRequest:
+      type: object
+      description: Serializer for phone verification.
+      properties:
+        code:
+          type: string
+          minLength: 6
+          maxLength: 6
+      required:
+      - code
+    Post:
+      type: object
+      description: Serializer for Post model with user details.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          allOf:
+          - $ref: '#/components/schemas/PublicUser'
+          readOnly: true
+        image:
+          type: string
+          format: uri
+        caption:
+          type: string
+        location:
+          type: string
+          maxLength: 200
+        likes_count:
+          type: integer
+          readOnly: true
+        comments_count:
+          type: integer
+          readOnly: true
+        shares_count:
+          type: integer
+          readOnly: true
+        is_archived:
+          type: boolean
+        is_liked:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - comments_count
+      - created_at
+      - id
+      - image
+      - is_liked
+      - likes_count
+      - shares_count
+      - updated_at
+      - user
+    PostRequest:
+      type: object
+      description: Serializer for Post model with user details.
+      properties:
+        image:
+          type: string
+          format: binary
+        caption:
+          type: string
+        location:
+          type: string
+          maxLength: 200
+        is_archived:
+          type: boolean
+      required:
+      - image
+    PublicUser:
+      type: object
+      description: Serializer for public user profiles (limited information).
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        bio:
+          type: string
+          maxLength: 500
+        profile_picture:
+          type: string
+          format: uri
+          nullable: true
+        is_verified:
+          type: boolean
+          readOnly: true
+        is_private:
+          type: boolean
+        is_following:
+          type: string
+          readOnly: true
+        is_blocked:
+          type: string
+          readOnly: true
+        followers_count:
+          type: string
+          readOnly: true
+        following_count:
+          type: string
+          readOnly: true
+        posts_count:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - followers_count
+      - following_count
+      - id
+      - is_blocked
+      - is_following
+      - is_verified
+      - posts_count
+      - username
+    PublicUserRequest:
+      type: object
+      description: Serializer for public user profiles (limited information).
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        bio:
+          type: string
+          maxLength: 500
+        profile_picture:
+          type: string
+          format: binary
+          nullable: true
+        is_private:
+          type: boolean
+      required:
+      - username
+    Reaction:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        message:
+          type: integer
+        user:
+          type: integer
+          readOnly: true
+        user_username:
+          type: string
+          readOnly: true
+        reaction:
+          type: string
+          maxLength: 10
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - message
+      - reaction
+      - user
+      - user_username
+    ReactionRequest:
+      type: object
+      properties:
+        message:
+          type: integer
+        reaction:
+          type: string
+          minLength: 1
+          maxLength: 10
+      required:
+      - message
+      - reaction
+    Reel:
+      type: object
+      description: Serializer for Reel model.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          type: integer
+          readOnly: true
+        user_username:
+          type: string
+          readOnly: true
+        video:
+          type: string
+          format: uri
+        caption:
+          type: string
+          maxLength: 2200
+        thumbnail:
+          type: string
+          format: uri
+          readOnly: true
+          nullable: true
+        audio:
+          type: string
+          readOnly: true
+          nullable: true
+        duration:
+          type: integer
+          readOnly: true
+          description: Duration in seconds
+        likes_count:
+          type: integer
+          readOnly: true
+        comments_count:
+          type: integer
+          readOnly: true
+        shares_count:
+          type: integer
+          readOnly: true
+        views_count:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - audio
+      - comments_count
+      - created_at
+      - duration
+      - id
+      - likes_count
+      - shares_count
+      - thumbnail
+      - updated_at
+      - user
+      - user_username
+      - video
+      - views_count
+    ReelRequest:
+      type: object
+      description: Serializer for Reel model.
+      properties:
+        video:
+          type: string
+          format: binary
+        caption:
+          type: string
+          maxLength: 2200
+      required:
+      - video
+    StatusEnum:
+      enum:
+      - uploading
+      - processing
+      - ready
+      - failed
+      type: string
+      description: |-
+        * `uploading` - Uploading
+        * `processing` - Processing
+        * `ready` - Ready
+        * `failed` - Failed
+    Story:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        media:
+          type: string
+          format: uri
+          nullable: true
+        media_type:
+          $ref: '#/components/schemas/MediaTypeEnum'
+        text:
+          type: string
+          maxLength: 500
+        duration:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          description: Duration in seconds
+        views_count:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_viewed:
+          type: string
+          readOnly: true
+      required:
+      - created_at
+      - expires_at
+      - id
+      - is_viewed
+      - user
+      - views_count
+    StoryHighlight:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          maxLength: 100
+        cover:
+          type: string
+          format: uri
+          nullable: true
+        stories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Story'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - stories
+      - title
+      - user
+    StoryHighlightRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        cover:
+          type: string
+          format: binary
+          nullable: true
+        story_ids:
+          type: array
+          items:
+            type: integer
+            writeOnly: true
+          writeOnly: true
+      required:
+      - story_ids
+      - title
+    StoryReply:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        story:
+          type: integer
+        user:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        text:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - story
+      - text
+      - user
+    StoryReplyRequest:
+      type: object
+      properties:
+        story:
+          type: integer
+        text:
+          type: string
+          minLength: 1
+      required:
+      - story
+      - text
+    StoryRequest:
+      type: object
+      properties:
+        media:
+          type: string
+          format: binary
+          nullable: true
+        media_type:
+          $ref: '#/components/schemas/MediaTypeEnum'
+        text:
+          type: string
+          maxLength: 500
+        duration:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          description: Duration in seconds
+    TokenObtainPair:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+          readOnly: true
+      required:
+      - access
+      - refresh
+    TokenObtainPairRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          writeOnly: true
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - password
+      - username
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+    TokenRefreshRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          minLength: 1
+      required:
+      - refresh
+    TokenVerifyRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - token
+    UpdatePost:
+      type: object
+      description: Serializer for updating posts.
+      properties:
+        caption:
+          type: string
+        location:
+          type: string
+          maxLength: 200
+    UpdatePostRequest:
+      type: object
+      description: Serializer for updating posts.
+      properties:
+        caption:
+          type: string
+        location:
+          type: string
+          maxLength: 200
+    User:
+      type: object
+      description: Serializer for User model.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        bio:
+          type: string
+          maxLength: 500
+        profile_picture:
+          type: string
+          format: uri
+          nullable: true
+        date_of_birth:
+          type: string
+          format: date
+          nullable: true
+        phone_number:
+          type: string
+          maxLength: 20
+        is_verified:
+          type: boolean
+          readOnly: true
+        is_private:
+          type: boolean
+        email_verified:
+          type: boolean
+          readOnly: true
+        phone_verified:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - email_verified
+      - id
+      - is_verified
+      - phone_verified
+      - updated_at
+      - username
+    UserRequest:
+      type: object
+      description: Serializer for User model.
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        bio:
+          type: string
+          maxLength: 500
+        profile_picture:
+          type: string
+          format: binary
+          nullable: true
+        date_of_birth:
+          type: string
+          format: date
+          nullable: true
+        phone_number:
+          type: string
+          maxLength: 20
+        is_private:
+          type: boolean
+      required:
+      - username
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

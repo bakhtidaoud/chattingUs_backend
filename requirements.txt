@@ -8,6 +8,7 @@ psycopg2-binary==2.9.9
 # Django REST Framework
 djangorestframework==3.14.0
 djangorestframework-simplejwt==5.3.1
+drf-spectacular==0.26.5
 
 # CORS
 django-cors-headers==4.3.1
@@ -25,3 +26,35 @@ Pillow==10.1.0
 
 # Utilities
 pytz==2024.1
+
+# Firebase Cloud Messaging
+firebase-admin==6.3.0
+
+# Celery for async tasks
+celery==5.3.4
+django-celery-beat==2.5.0
+
+# Video/Audio Processing
+ffmpeg-python==0.2.0
+
+# Security
+django-ratelimit==4.1.0
+django-otp==1.3.0
+qrcode==7.4.2
+bleach==6.1.0
+python-magic-bin==0.4.14
+pyotp==2.9.0
+
+# Admin enhancements
+django-import-export==3.3.5
+openpyxl==3.1.2
+
+# Testing
+pytest==7.4.3
+pytest-django==4.7.0
+pytest-cov==4.1.0
+pytest-asyncio==0.23.2
+pytest-mock==3.12.0
+factory-boy==3.3.0
+faker==22.0.0
+locust==2.20.0

@@ -23,6 +23,7 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
     TokenVerifyView,
 )
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -37,8 +38,17 @@ urlpatterns = [
     path('api/posts/', include('posts.urls')),
     path('api/stories/', include('stories.urls')),
     path('api/reels/', include('reels.urls')),
-    path('api/messages/', include('messages.urls')),
+    path('api/chat/', include('chat.urls')),
     path('api/notifications/', include('notifications.urls')),
+    path('api/explore/', include('explore.urls')),
+    path('api/media/', include('mediafiles.urls')),
+    path('api/security/', include('security.urls')),
+    path('api/live/', include('live.urls')),
+    
+    # API Documentation
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema', template_name='api_docs.html'), name='swagger-ui'),
+    path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 ]
 
 # Serve media files in development
