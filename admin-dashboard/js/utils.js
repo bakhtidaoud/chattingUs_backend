@@ -11,11 +11,11 @@ const Utils = {
     showError(message) {
         const errorElement = document.getElementById('errorMessage');
         const errorText = document.getElementById('errorText');
-        
+
         if (errorElement && errorText) {
             errorText.textContent = message;
             errorElement.style.display = 'flex';
-            
+
             // Auto-hide after 5 seconds
             setTimeout(() => {
                 this.hideError();
@@ -41,7 +41,7 @@ const Utils = {
     setButtonLoading(button, loading) {
         const btnText = button.querySelector('.btn-text');
         const btnLoader = button.querySelector('.btn-loader');
-        
+
         if (loading) {
             button.disabled = true;
             if (btnText) btnText.style.display = 'none';
@@ -85,9 +85,9 @@ const Utils = {
      */
     formatDate(date) {
         const d = new Date(date);
-        const options = { 
-            year: 'numeric', 
-            month: 'short', 
+        const options = {
+            year: 'numeric',
+            month: 'short',
             day: 'numeric',
             hour: '2-digit',
             minute: '2-digit'
@@ -152,8 +152,8 @@ const Utils = {
      * @returns {string}
      */
     generateId() {
-        return Math.random().toString(36).substring(2, 15) + 
-               Math.random().toString(36).substring(2, 15);
+        return Math.random().toString(36).substring(2, 15) +
+            Math.random().toString(36).substring(2, 15);
     },
 
     /**
@@ -189,6 +189,11 @@ const Utils = {
      * Redirect to dashboard if authenticated
      */
     redirectIfAuthenticated() {
+        // Prevent redirect loop - don't redirect if already on dashboard
+        if (window.location.pathname.includes('dashboard.html')) {
+            return;
+        }
+
         if (this.isAuthenticated()) {
             window.location.href = 'dashboard.html';
         }
@@ -207,13 +212,13 @@ const Utils = {
             <i class="fas fa-${this.getToastIcon(type)}"></i>
             <span>${message}</span>
         `;
-        
+
         // Add to body
         document.body.appendChild(toast);
-        
+
         // Animate in
         setTimeout(() => toast.classList.add('show'), 100);
-        
+
         // Remove after 3 seconds
         setTimeout(() => {
             toast.classList.remove('show');

@@ -13,26 +13,36 @@ const Auth = {
    * Initialize authentication
    */
   init() {
-    // Initialize theme
-    Utils.initTheme();
-
     // Check if on login page
     if (window.location.pathname.includes('index.html') ||
       window.location.pathname === '/' ||
       window.location.pathname.endsWith('/admin-dashboard/')) {
       this.initLoginPage();
-    } else {
-      // Require authentication for other pages
-      Utils.requireAuth();
     }
+    // Note: Dashboard pages are protected by auth-check.js
   },
 
   /**
    * Initialize login page
    */
   initLoginPage() {
-    // Redirect if already authenticated
-    Utils.redirectIfAuthenticated();
+    // Check if already authenticated and redirect to dashboard
+    const token = localStorage.getItem('access_token');
+    const rememberMe = localStorage.getItem('remember_me');
+
+    // If user has "Remember Me" enabled and has a token, redirect to dashboard
+    if (token && rememberMe === 'true') {
+      console.log('Remember Me enabled, redirecting to dashboard...');
+      window.location.href = 'dashboard.html';
+      return;
+    }
+
+    // If user has a token but no "Remember Me", still redirect (they're logged in)
+    if (token) {
+      console.log('User is logged in, redirecting to dashboard...');
+      window.location.href = 'dashboard.html';
+      return;
+    }
 
     // Get form elements
     const loginForm = document.getElementById('loginForm');

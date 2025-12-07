@@ -558,7 +558,78 @@ const Dashboard = {
   // Placeholder methods for CRUD operations
   viewUser(id) { console.log('View user:', id); },
   editUser(id) { console.log('Edit user:', id); },
-  viewPost(id) { console.log('View post:', id); },
+  // View post details
+  async viewPost(id) {
+    try {
+      const post = await API.getPost(id);
+
+      // Format comments HTML
+      let commentsHTML = '';
+      if (post.comments && post.comments.length > 0) {
+        commentsHTML = `
+          <div class="post-comments">
+            <h3>Comments (${post.comments.length})</h3>
+            <div class="comments-list">
+              ${post.comments.map(comment => `
+                <div class="comment-item">
+                  <div class="comment-user"><strong>${comment.user.username}</strong></div>
+                  <div class="comment-text">${comment.text}</div>
+                  <div class="comment-date">${new Date(comment.created_at).toLocaleString()}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      } else {
+        commentsHTML = '<div class="post-comments"><p>No comments yet</p></div>';
+      }
+
+      // Create modal HTML
+      const modalHTML = `
+        <div class="modal-overlay" id="postModal">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2>Post Details</h2>
+              <button class="modal-close" onclick="Dashboard.closeModal('postModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+              <div class="post-detail">
+                <div class="post-user">
+                  <strong>User:</strong> ${post.user.username} (${post.user.email})
+                </div>
+                <div class="post-caption">
+                  <strong>Caption:</strong> ${post.caption || 'No caption'}
+                </div>
+                <div class="post-stats">
+                  <span><i class="fas fa-heart"></i> ${post.likes_count} likes</span>
+                  <span><i class="fas fa-comment"></i> ${post.comments_count} comments</span>
+                </div>
+                <div class="post-date">
+                  <strong>Created:</strong> ${new Date(post.created_at).toLocaleString()}
+                </div>
+                ${commentsHTML}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Add modal to page
+      document.body.insertAdjacentHTML('beforeend', modalHTML);
+    } catch (error) {
+      console.error('Error loading post:', error);
+      Utils.showToast('Failed to load post details', 'error');
+    }
+  },
+
+  // Close modal
+  closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+      modal.remove();
+    }
+  },
+
   loadComments() { console.log('Load comments'); },
   loadStories() { console.log('Load stories'); },
   loadLiveStreams() { console.log('Load live streams'); },

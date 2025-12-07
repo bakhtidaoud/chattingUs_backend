@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clear Cache - ChattingUs Admin</title>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .container {
+      background: white;
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      text-align: center;
+      max-width: 400px;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    p {
+      color: #666;
+      margin-bottom: 30px;
+    }
+
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    button:hover {
+      transform: scale(1.05);
+    }
+
+    .success {
+      color: #10b981;
+      font-weight: bold;
+      display: none;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🔧 Fix Infinite Refresh</h1>
+    <p>Click the button below to clear all cached data and fix the infinite refresh issue.</p>
+    <button onclick="clearCache()">Clear Cache & Redirect to Login</button>
+    <p class="success" id="successMessage">✅ Cache cleared! Redirecting...</p>
+  </div>
+
+  <script>
+    function clearCache() {
+      // Clear all localStorage
+      localStorage.clear();
+
+      // Clear all sessionStorage
+      sessionStorage.clear();
+
+      // Show success message
+      document.getElementById('successMessage').style.display = 'block';
+
+      // Redirect to login after 1 second
+      setTimeout(() => {
+        window.location.href = 'index.html';
+      }, 1000);
+    }
+  </script>
+</body>
+
+</html>

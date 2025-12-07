@@ -5,7 +5,7 @@ URL configuration for admin dashboard
 
 from django.urls import path, include
 from django.views.static import serve
-from . import admin_dashboard_views
+import admin_dashboard_views
 import os
 
 # Get the admin-dashboard directory path
@@ -16,9 +16,11 @@ ADMIN_DASHBOARD_DIR = os.path.join(
 
 urlpatterns = [
     # Dashboard pages
-    path('admin-dashboard/', admin_dashboard_views.AdminDashboardView.as_view(), name='admin_dashboard'),
-    path('admin-dashboard/login.html', admin_dashboard_views.AdminLoginView.as_view(), name='admin_login'),
-    path('admin-dashboard/dashboard.html', admin_dashboard_views.AdminDashboardView.as_view(), name='admin_dashboard_page'),
+    path('admin-dashboard/', admin_dashboard_views.AdminDashboardView.as_view(), name='admin_dashboard'),  # Login page
+    path('admin-dashboard/index.html', admin_dashboard_views.AdminLoginView.as_view(), name='admin_index'),  # Login page
+    path('admin-dashboard/login.html', admin_dashboard_views.AdminLoginView.as_view(), name='admin_login'),  # Login page
+    path('admin-dashboard/dashboard.html', admin_dashboard_views.AdminDashboardPageView.as_view(), name='admin_dashboard_page'),  # Dashboard
+    path('admin-dashboard/debug.html', admin_dashboard_views.AdminDebugView.as_view(), name='admin_debug'),  # Debug page
     
     # Serve static files (CSS, JS, images)
     path('admin-dashboard/css/<path:path>', 

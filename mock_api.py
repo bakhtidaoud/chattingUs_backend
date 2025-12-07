@@ -3,7 +3,7 @@ Mock API for Admin Dashboard Testing
 Provides fake data for testing the frontend without full backend implementation
 """
 
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
@@ -16,6 +16,7 @@ import random
 # ============================================
 
 @api_view(['POST'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def mock_login(request):
     """Mock login endpoint"""
@@ -66,6 +67,7 @@ def mock_current_user(request):
 # ============================================
 
 @api_view(['GET'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def mock_dashboard_stats(request):
     """Mock dashboard statistics"""
@@ -97,6 +99,7 @@ def mock_dashboard_stats(request):
 # ============================================
 
 @api_view(['GET'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def mock_users_list(request):
     """Mock users list"""
@@ -309,7 +312,7 @@ def mock_reports_list(request):
 # URL patterns for mock API
 from django.urls import path
 
-mock_api_urls = [
+urlpatterns = [
     # Auth
     path('auth/login/', mock_login),
     path('auth/logout/', mock_logout),

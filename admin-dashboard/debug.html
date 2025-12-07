@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Debug - ChattingUs Admin</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 40px;
+      background: #f5f5f5;
+    }
+
+    .debug-box {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+      color: #333;
+      margin-top: 0;
+    }
+
+    .success {
+      color: #10b981;
+    }
+
+    .error {
+      color: #ef4444;
+    }
+
+    .info {
+      color: #3b82f6;
+    }
+
+    pre {
+      background: #f9f9f9;
+      padding: 10px;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+    }
+
+    button:hover {
+      background: #5568d3;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="debug-box">
+    <h2>🔧 ChattingUs Admin Dashboard - Debug Page</h2>
+    <p class="info">This page helps diagnose issues with the admin dashboard.</p>
+  </div>
+
+  <div class="debug-box">
+    <h2>Server Connection</h2>
+    <p id="serverStatus">Testing...</p>
+  </div>
+
+  <div class="debug-box">
+    <h2>JavaScript Files</h2>
+    <p id="jsStatus">Checking...</p>
+  </div>
+
+  <div class="debug-box">
+    <h2>LocalStorage</h2>
+    <pre id="storageInfo"></pre>
+    <button onclick="clearStorage()">Clear All Storage</button>
+  </div>
+
+  <div class="debug-box">
+    <h2>Actions</h2>
+    <button onclick="window.location.href='index.html'">Go to Login Page</button>
+    <button onclick="window.location.href='dashboard.html'">Go to Dashboard</button>
+    <button onclick="testAPI()">Test API</button>
+  </div>
+
+  <div class="debug-box">
+    <h2>Console Output</h2>
+    <pre id="consoleOutput"></pre>
+  </div>
+
+  <script>
+    // Capture console logs
+    const originalLog = console.log;
+    const originalError = console.error;
+    let logs = [];
+
+    console.log = function (...args) {
+      logs.push('[LOG] ' + args.join(' '));
+      updateConsole();
+      originalLog.apply(console, args);
+    };
+
+    console.error = function (...args) {
+      logs.push('[ERROR] ' + args.join(' '));
+      updateConsole();
+      originalError.apply(console, args);
+    };
+
+    function updateConsole() {
+      document.getElementById('consoleOutput').textContent = logs.join('\n');
+    }
+
+    // Check server connection
+    async function checkServer() {
+      try {
+        const response = await fetch('/api/analytics/dashboard/');
+        if (response.ok) {
+          document.getElementById('serverStatus').innerHTML =
+            '<span class="success">✅ Server is running and accessible</span>';
+        } else {
+          document.getElementById('serverStatus').innerHTML =
+            `<span class="error">⚠️ Server responded with status: ${response.status}</span>`;
+        }
+      } catch (error) {
+        document.getElementById('serverStatus').innerHTML =
+          `<span class="error">❌ Cannot connect to server: ${error.message}</span>`;
+      }
+    }
+
+    // Check JavaScript files
+    async function checkJSFiles() {
+      const files = ['js/utils.js', 'js/api.js', 'js/auth.js'];
+      let status = '';
+
+      for (const file of files) {
+        try {
+          const response = await fetch(file);
+          if (response.ok) {
+            status += `<span class="success">✅ ${file}</span><br>`;
+          } else {
+            status += `<span class="error">❌ ${file} (${response.status})</span><br>`;
+          }
+        } catch (error) {
+          status += `<span class="error">❌ ${file} (${error.message})</span><br>`;
+        }
+      }
+
+      document.getElementById('jsStatus').innerHTML = status;
+    }
+
+    // Show storage info
+    function showStorage() {
+      const storage = {
+        'access_token': localStorage.getItem('access_token'),
+        'refresh_token': localStorage.getItem('refresh_token'),
+        'user': localStorage.getItem('user'),
+        'theme': localStorage.getItem('theme'),
+        'remember_me': localStorage.getItem('remember_me')
+      };
+
+      document.getElementById('storageInfo').textContent = JSON.stringify(storage, null, 2);
+    }
+
+    // Clear storage
+    function clearStorage() {
+      localStorage.clear();
+      sessionStorage.clear();
+      console.log('Storage cleared!');
+      showStorage();
+      alert('Storage cleared! You can now try accessing the login page.');
+    }
+
+    // Test API
+    async function testAPI() {
+      console.log('Testing API...');
+      try {
+        const response = await fetch('/api/analytics/dashboard/');
+        const data = await response.json();
+        console.log('API Response:', data);
+        alert('API test successful! Check console for details.');
+      } catch (error) {
+        console.error('API test failed:', error);
+        alert('API test failed! Check console for details.');
+      }
+    }
+
+    // Run checks on load
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('Debug page loaded');
+      checkServer();
+      checkJSFiles();
+      showStorage();
+    });
+  </script>
+</body>
+
+</html>

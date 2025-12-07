@@ -24,6 +24,9 @@ from rest_framework_simplejwt.views import (
     TokenVerifyView,
 )
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+import analytics_api
+import users_api
+import posts_api
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -32,6 +35,26 @@ urlpatterns = [
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+    
+    # Admin Dashboard URLs
+    path('', include('admin_dashboard_urls')),
+    
+    # Real Analytics API (takes precedence over mock)
+    path('api/analytics/dashboard/', analytics_api.dashboard_stats, name='analytics_dashboard'),
+    path('api/analytics/users/growth/', analytics_api.user_growth_stats, name='analytics_user_growth'),
+    path('api/analytics/content/activity/', analytics_api.content_activity_stats, name='analytics_content_activity'),
+    
+    # Real Users API (takes precedence over mock)
+    path('api/users/', users_api.users_list, name='users_list'),
+    path('api/users/<int:pk>/', users_api.user_detail_or_update, name='user_detail'),
+    path('api/users/<int:pk>/verify/', users_api.user_verify, name='user_verify'),
+    
+    # Real Posts API (takes precedence over mock)
+    path('api/posts/', posts_api.posts_list, name='posts_list'),
+    path('api/posts/<int:pk>/', posts_api.post_detail, name='post_detail'),
+    
+    # Mock API for testing (fallback for other endpoints)
+    path('api/', include('mock_api')),
     
     # App URLs
     path('api/users/', include('users.urls')),

@@ -29,14 +29,15 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
         # Permissions-Policy (formerly Feature-Policy)
         response['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
         
-        # Content-Security-Policy (basic)
+        # Content-Security-Policy (updated for admin dashboard)
         if not response.get('Content-Security-Policy'):
             response['Content-Security-Policy'] = (
                 "default-src 'self'; "
-                "script-src 'self' 'unsafe-inline'; "
-                "style-src 'self' 'unsafe-inline'; "
-                "img-src 'self' data: https:; "
-                "font-src 'self' data:;"
+                "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
+                "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
+                "img-src 'self' data: https: http:; "
+                "connect-src 'self' ws: wss: https://cdn.jsdelivr.net;"
             )
         
         return response

@@ -88,6 +88,8 @@ const API = {
    */
   async handleResponse(response) {
     // Handle 401 Unauthorized
+    // DISABLED: Don't auto-redirect on 401 to prevent logout when API endpoints don't exist
+    /*
     if (response.status === 401) {
       const refreshed = await this.tryRefreshToken();
       if (!refreshed) {
@@ -96,6 +98,16 @@ const API = {
       }
       // Retry the original request will happen automatically
       throw new Error('Token refreshed, retry needed');
+    }
+    */
+
+    // Just throw error on 401 without redirecting
+    if (response.status === 401) {
+      throw {
+        status: 401,
+        message: 'Unauthorized - API endpoint may not exist or require authentication',
+        errors: {}
+      };
     }
 
     // Handle other error status codes
@@ -194,7 +206,7 @@ const API = {
   redirectToLogin() {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
-    window.location.href = '/login.html';
+    window.location.href = '/admin-dashboard/index.html';
   },
 
   // Convenience methods
@@ -216,6 +228,51 @@ const API = {
 
   delete(endpoint) {
     return this.request('DELETE', endpoint);
+  },
+
+  // Shortcut methods for commonly used endpoints
+  getDashboardStats() {
+    return this.analytics.getDashboardStats();
+  },
+
+  getUsers(params) {
+    return this.users.getUsers(params);
+  },
+
+  getUser(id) {
+    return this.users.getUser(id);
+  },
+
+  verifyUser(id) {
+    return this.post(`/users/${id}/verify/`, {});
+  },
+
+  updateUser(id, data) {
+    return this.users.updateUser(id, data);
+  },
+
+  getPosts(params) {
+    return this.posts.getPosts(params);
+  },
+
+  getPost(id) {
+    return this.posts.getPost(id);
+  },
+
+  getStories(params) {
+    return this.stories.getStories(params);
+  },
+
+  getReels(params) {
+    return this.reels.getReels(params);
+  },
+
+  login(email, password) {
+    return this.auth.login(email, password);
+  },
+
+  logout() {
+    return this.auth.logout();
   },
 
   // ============================================
