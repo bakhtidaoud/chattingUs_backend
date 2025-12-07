@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ChattingUs Admin Dashboard - Manage your social media platform">
+  <title>Dashboard - ChattingUs Admin</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/modals.css">
+  <link rel="stylesheet" href="css/dark-mode.css">
+  <link rel="stylesheet" href="css/responsive.css">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+
+<body class="dashboard-page">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <i class="fas fa-comments"></i>
+        <span class="logo-text">ChattingUs</span>
+      </div>
+      <button class="sidebar-toggle" id="sidebarToggle">
+        <i class="fas fa-bars"></i>
+      </button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="#dashboard" class="nav-item active" data-page="dashboard">
+        <i class="fas fa-home"></i>
+        <span class="nav-text">Dashboard</span>
+      </a>
+      <a href="#users" class="nav-item" data-page="users">
+        <i class="fas fa-users"></i>
+        <span class="nav-text">Users</span>
+      </a>
+      <a href="#posts" class="nav-item" data-page="posts">
+        <i class="fas fa-image"></i>
+        <span class="nav-text">Posts</span>
+      </a>
+      <a href="#stories" class="nav-item" data-page="stories">
+        <i class="fas fa-bolt"></i>
+        <span class="nav-text">Stories</span>
+      </a>
+      <a href="#live" class="nav-item" data-page="live">
+        <i class="fas fa-video"></i>
+        <span class="nav-text">Live Streams</span>
+      </a>
+      <a href="#analytics" class="nav-item" data-page="analytics">
+        <i class="fas fa-chart-line"></i>
+        <span class="nav-text">Analytics</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="nav-item" id="logoutBtn">
+        <i class="fas fa-sign-out-alt"></i>
+        <span class="nav-text">Logout</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Top Navbar -->
+    <header class="navbar">
+      <div class="navbar-left">
+        <button class="mobile-menu-toggle" id="mobileMenuToggle">
+          <i class="fas fa-bars"></i>
+        </button>
+        <h1 class="page-title" id="pageTitle">Dashboard</h1>
+      </div>
+
+      <div class="navbar-center">
+        <div class="search-bar">
+          <i class="fas fa-search"></i>
+          <input type="text" placeholder="Search users, posts, comments..." id="globalSearch">
+        </div>
+      </div>
+
+      <div class="navbar-right">
+        <button class="theme-toggle-btn" id="themeToggleBtn">
+          <i class="fas fa-moon"></i>
+        </button>
+
+        <div class="user-menu">
+          <button class="user-avatar" id="userMenuBtn">
+            <img src="https://ui-avatars.com/api/?name=Admin&background=8b5cf6&color=fff" alt="Admin">
+            <span class="user-name" id="userName">Admin</span>
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          <div class="user-dropdown" id="userDropdown">
+            <a href="#profile"><i class="fas fa-user"></i> Profile</a>
+            <a href="#settings"><i class="fas fa-cog"></i> Settings</a>
+            <a href="#" id="logoutLink"><i class="fas fa-sign-out-alt"></i> Logout</a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Page Content -->
+    <main class="page-content" id="pageContent">
+      <!-- Dashboard Overview -->
+      <section id="dashboardSection" class="content-section active">
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+          <div class="stat-card glass-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+              <i class="fas fa-users"></i>
+            </div>
+            <div class="stat-content">
+              <h3 class="stat-value" id="totalUsers">0</h3>
+              <p class="stat-label">Total Users</p>
+              <span class="stat-change positive">
+                <i class="fas fa-arrow-up"></i> 12% this month
+              </span>
+            </div>
+          </div>
+
+          <div class="stat-card glass-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+              <i class="fas fa-image"></i>
+            </div>
+            <div class="stat-content">
+              <h3 class="stat-value" id="totalPosts">0</h3>
+              <p class="stat-label">Total Posts</p>
+              <span class="stat-change positive">
+                <i class="fas fa-arrow-up"></i> 8% this week
+              </span>
+            </div>
+          </div>
+
+          <div class="stat-card glass-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);">
+              <i class="fas fa-flag"></i>
+            </div>
+            <div class="stat-content">
+              <h3 class="stat-value" id="totalReports">0</h3>
+              <p class="stat-label">Total Reports</p>
+              <span class="stat-change">
+                <i class="fas fa-exclamation-circle"></i> <span id="pendingReports">0</span> pending
+              </span>
+            </div>
+          </div>
+
+          <div class="stat-card glass-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+              <i class="fas fa-video"></i>
+            </div>
+            <div class="stat-content">
+              <h3 class="stat-value" id="activeLiveStreams">0</h3>
+              <p class="stat-label">Active Streams</p>
+              <span class="stat-change">
+                <i class="fas fa-circle pulse"></i> Live now
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="charts-grid">
+          <div class="chart-card glass-card">
+            <div class="card-header">
+              <h3>User Growth</h3>
+              <select class="chart-filter" id="userGrowthFilter">
+                <option value="7">Last 7 days</option>
+                <option value="30" selected>Last 30 days</option>
+                <option value="90">Last 90 days</option>
+              </select>
+            </div>
+            <div class="chart-container">
+              <canvas id="userGrowthChart"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-card glass-card">
+            <div class="card-header">
+              <h3>Content Activity</h3>
+              <select class="chart-filter" id="contentFilter">
+                <option value="7">Last 7 days</option>
+                <option value="30" selected>Last 30 days</option>
+              </select>
+            </div>
+            <div class="chart-container">
+              <canvas id="contentActivityChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Users Section -->
+      <section id="usersSection" class="content-section">
+        <div class="section-header">
+          <h2>User Management</h2>
+          <button class="btn-primary" id="addUserBtn">
+            <i class="fas fa-plus"></i> Add User
+          </button>
+        </div>
+
+        <div class="table-card glass-card">
+          <!-- Enhanced Filters -->
+          <div class="table-header">
+            <div class="table-search">
+              <i class="fas fa-search"></i>
+              <input type="text" placeholder="Search users..." id="userSearch">
+            </div>
+            <div class="table-filters">
+              <select id="userStatusFilter">
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="banned">Banned</option>
+              </select>
+              <select id="userVerifiedFilter">
+                <option value="all">All Verified</option>
+                <option value="verified">Verified</option>
+                <option value="unverified">Unverified</option>
+              </select>
+              <select id="userProviderFilter">
+                <option value="all">All Providers</option>
+                <option value="email">Email</option>
+                <option value="google">Google</option>
+                <option value="microsoft">Microsoft</option>
+              </select>
+              <button class="btn-secondary" id="exportUsersBtn">
+                <i class="fas fa-download"></i> Export
+              </button>
+            </div>
+          </div>
+
+          <!-- Bulk Actions -->
+          <div class="bulk-actions" id="bulkActions" style="display: none;">
+            <span class="bulk-selected"><span id="selectedCount">0</span> selected</span>
+            <button class="btn-danger btn-sm" id="bulkDeleteBtn">
+              <i class="fas fa-trash"></i> Delete Selected
+            </button>
+            <button class="btn-secondary btn-sm" id="bulkExportBtn">
+              <i class="fas fa-download"></i> Export Selected
+            </button>
+            <button class="btn-secondary btn-sm" id="clearSelectionBtn">
+              Clear Selection
+            </button>
+          </div>
+
+          <!-- Users Table -->
+          <div class="table-container">
+            <table id="usersTable">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="selectAllUsers"></th>
+                  <th class="sortable" data-sort="username">
+                    Username <i class="fas fa-sort"></i>
+                  </th>
+                  <th class="sortable" data-sort="email">
+                    Email <i class="fas fa-sort"></i>
+                  </th>
+                  <th>Verified</th>
+                  <th>Provider</th>
+                  <th class="sortable" data-sort="date_joined">
+                    Joined <i class="fas fa-sort"></i>
+                  </th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody">
+                <tr>
+                  <td colspan="7" class="loading-cell">
+                    <i class="fas fa-spinner fa-spin"></i> Loading users...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Mobile Card View -->
+          <div class="mobile-cards" id="usersMobileCards" style="display: none;">
+            <!-- Cards will be inserted here -->
+          </div>
+
+          <div class="table-pagination" id="usersPagination"></div>
+        </div>
+      </section>
+
+      <!-- Posts Section -->
+      <section id="postsSection" class="content-section">
+        <div class="section-header">
+          <h2>Posts Management</h2>
+        </div>
+
+        <div class="table-card glass-card">
+          <div class="table-header">
+            <div class="table-search">
+              <i class="fas fa-search"></i>
+              <input type="text" placeholder="Search posts..." id="postSearch">
+            </div>
+          </div>
+          <div class="table-container">
+            <table id="postsTable">
+              <thead>
+                <tr>
+                  <th>Post</th>
+                  <th>Author</th>
+                  <th>Created</th>
+                  <th>Likes</th>
+                  <th>Comments</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="postsTableBody">
+                <tr>
+                  <td colspan="6" class="loading-cell">
+                    <i class="fas fa-spinner fa-spin"></i> Loading posts...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="table-pagination" id="postsPagination"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Sidebar Overlay (Mobile) -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- User Details Modal -->
+  <div class="modal" id="userDetailsModal">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h3>User Details</h3>
+        <button class="modal-close" data-modal="userDetailsModal">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body" id="userDetailsBody">
+        <div class="loading-spinner">
+          <i class="fas fa-spinner fa-spin"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit User Modal -->
+  <div class="modal" id="editUserModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Edit User</h3>
+        <button class="modal-close" data-modal="editUserModal">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="editUserForm">
+          <input type="hidden" id="editUserId">
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="editUsername">Username</label>
+              <input type="text" id="editUsername" required>
+            </div>
+            <div class="form-group">
+              <label for="editEmail">Email</label>
+              <input type="email" id="editEmail" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="editFirstName">First Name</label>
+              <input type="text" id="editFirstName">
+            </div>
+            <div class="form-group">
+              <label for="editLastName">Last Name</label>
+              <input type="text" id="editLastName">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="editBio">Bio</label>
+            <textarea id="editBio" rows="3"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="editIsActive">
+              Active Account
+            </label>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn-secondary" data-modal="editUserModal">Cancel</button>
+            <button type="submit" class="btn-primary">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add User Modal -->
+  <div class="modal" id="addUserModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Add New User</h3>
+        <button class="modal-close" data-modal="addUserModal">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="addUserForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="addUsername">Username *</label>
+              <input type="text" id="addUsername" required>
+            </div>
+            <div class="form-group">
+              <label for="addEmail">Email *</label>
+              <input type="email" id="addEmail" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="addPassword">Password *</label>
+            <input type="password" id="addPassword" required minlength="8">
+            <small>Minimum 8 characters</small>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="addFirstName">First Name</label>
+              <input type="text" id="addFirstName">
+            </div>
+            <div class="form-group">
+              <label for="addLastName">Last Name</label>
+              <input type="text" id="addLastName">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="addBio">Bio</label>
+            <textarea id="addBio" rows="3"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="addProfilePicture">Profile Picture</label>
+            <input type="file" id="addProfilePicture" accept="image/*">
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn-secondary" data-modal="addUserModal">Cancel</button>
+            <button type="submit" class="btn-primary">Create User</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/utils.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/modals.js"></script>
+  <script src="js/users.js"></script>
+  <script src="js/main.js"></script>
+</body>
+
+</html>

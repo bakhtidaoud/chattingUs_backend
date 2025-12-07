@@ -1,0 +1,511 @@
+/* ============================================
+   DARK MODE THEME
+   Beautiful dark mode with smooth transitions
+   ============================================ */
+
+/* ============================================
+   CSS VARIABLES - LIGHT MODE (DEFAULT)
+   ============================================ */
+
+:root {
+  /* Background Colors */
+  --bg-primary: #f5f7fa;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f7fafc;
+  --bg-card: #ffffff;
+
+  /* Text Colors */
+  --text-primary: #2d3748;
+  --text-secondary: #718096;
+  --text-tertiary: #a0aec0;
+  --text-white: #ffffff;
+
+  /* Border & Divider */
+  --border-color: #e2e8f0;
+  --divider-color: #edf2f7;
+
+  /* Brand Colors */
+  --primary-purple: #667eea;
+  --secondary-purple: #764ba2;
+
+  /* Status Colors */
+  --success-color: #48bb78;
+  --warning-color: #ed8936;
+  --error-color: #f56565;
+  --info-color: #4299e1;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+
+  /* Glassmorphism */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.18);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+
+  /* Overlay */
+  --overlay-bg: rgba(0, 0, 0, 0.5);
+
+  /* Chart Colors */
+  --chart-primary: #667eea;
+  --chart-secondary: #764ba2;
+  --chart-success: #48bb78;
+  --chart-warning: #ed8936;
+  --chart-error: #f56565;
+  --chart-grid: #e2e8f0;
+  --chart-text: #718096;
+}
+
+/* ============================================
+   CSS VARIABLES - DARK MODE
+   ============================================ */
+
+[data-theme="dark"] {
+  /* Background Colors */
+  --bg-primary: #1a202c;
+  --bg-secondary: #2d3748;
+  --bg-tertiary: #374151;
+  --bg-card: #2d3748;
+
+  /* Text Colors */
+  --text-primary: #e2e8f0;
+  --text-secondary: #a0aec0;
+  --text-tertiary: #718096;
+  --text-white: #ffffff;
+
+  /* Border & Divider */
+  --border-color: #4a5568;
+  --divider-color: #374151;
+
+  /* Brand Colors (same in both modes) */
+  --primary-purple: #667eea;
+  --secondary-purple: #764ba2;
+
+  /* Status Colors (brighter for dark mode) */
+  --success-color: #68d391;
+  --warning-color: #f6ad55;
+  --error-color: #fc8181;
+  --info-color: #63b3ed;
+
+  /* Shadows (darker for dark mode) */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
+
+  /* Glassmorphism (dark) */
+  --glass-bg: rgba(45, 55, 72, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+
+  /* Overlay */
+  --overlay-bg: rgba(0, 0, 0, 0.7);
+
+  /* Chart Colors (brighter for dark mode) */
+  --chart-primary: #7c3aed;
+  --chart-secondary: #8b5cf6;
+  --chart-success: #68d391;
+  --chart-warning: #f6ad55;
+  --chart-error: #fc8181;
+  --chart-grid: #4a5568;
+  --chart-text: #a0aec0;
+}
+
+/* ============================================
+   SMOOTH TRANSITIONS
+   ============================================ */
+
+body,
+.sidebar,
+.navbar,
+.card,
+.modal-content,
+.btn,
+button,
+input,
+textarea,
+select,
+.table,
+.data-table {
+  transition: background-color 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+/* ============================================
+   DARK MODE TOGGLE BUTTON
+   ============================================ */
+
+.theme-toggle {
+  position: relative;
+  width: 60px;
+  height: 30px;
+  background: var(--bg-tertiary);
+  border-radius: 15px;
+  cursor: pointer;
+  border: 2px solid var(--border-color);
+  transition: all 0.3s ease;
+}
+
+.theme-toggle-slider {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  background: var(--primary-purple);
+  border-radius: 50%;
+  transition: transform 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+}
+
+[data-theme="dark"] .theme-toggle-slider {
+  transform: translateX(30px);
+}
+
+.theme-toggle:hover {
+  border-color: var(--primary-purple);
+}
+
+/* ============================================
+   COMPONENT ADJUSTMENTS FOR DARK MODE
+   ============================================ */
+
+/* Sidebar */
+.sidebar {
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+}
+
+.sidebar-menu a {
+  color: var(--text-secondary);
+}
+
+.sidebar-menu a:hover,
+.sidebar-menu a.active {
+  background: rgba(102, 126, 234, 0.1);
+  color: var(--primary-purple);
+}
+
+/* Navbar */
+.navbar {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Cards */
+.card,
+.stat-card,
+.post-card,
+.story-card,
+.reel-card,
+.stream-card,
+.notification-card,
+.report-card,
+.session-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+}
+
+/* Tables */
+.data-table,
+.table {
+  background: var(--bg-card);
+}
+
+.data-table thead,
+.table thead {
+  background: var(--bg-tertiary);
+}
+
+.data-table th,
+.data-table td,
+.table th,
+.table td {
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.data-table tbody tr:hover,
+.table tbody tr:hover {
+  background: var(--bg-tertiary);
+}
+
+/* Modals */
+.modal-content {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+}
+
+.modal-overlay {
+  background: var(--overlay-bg);
+}
+
+/* Forms */
+input,
+textarea,
+select {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--primary-purple);
+  background: var(--bg-secondary);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* Buttons */
+.btn-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-primary);
+}
+
+/* Tooltips */
+[data-tooltip]::after {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+/* Dropdown */
+.dropdown-menu {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+}
+
+.dropdown-item:hover {
+  background: var(--bg-tertiary);
+}
+
+/* Badges */
+.badge {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+/* Code blocks */
+code,
+pre {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+/* Scrollbar - Dark Mode */
+[data-theme="dark"] ::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--border-color);
+}
+
+/* ============================================
+   IMAGE ADJUSTMENTS FOR DARK MODE
+   ============================================ */
+
+[data-theme="dark"] img {
+  opacity: 0.9;
+}
+
+[data-theme="dark"] img:hover {
+  opacity: 1;
+}
+
+/* Logo brightness adjustment */
+[data-theme="dark"] .logo img {
+  filter: brightness(0.9);
+}
+
+/* ============================================
+   CHART ADJUSTMENTS FOR DARK MODE
+   ============================================ */
+
+[data-theme="dark"] .chart-container {
+  background: var(--bg-card);
+}
+
+/* Chart.js will use CSS variables automatically */
+
+/* ============================================
+   GLASSMORPHISM EFFECTS
+   ============================================ */
+
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Login card glassmorphism */
+.login-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+}
+
+/* ============================================
+   SPECIAL DARK MODE ENHANCEMENTS
+   ============================================ */
+
+/* Glow effects for dark mode */
+[data-theme="dark"] .btn-primary:hover {
+  box-shadow: 0 0 20px rgba(102, 126, 234, 0.4);
+}
+
+[data-theme="dark"] .card:hover {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* Subtle gradient backgrounds */
+[data-theme="dark"] .gradient-bg {
+  background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+}
+
+/* Enhanced borders */
+[data-theme="dark"] .highlight-border {
+  border-color: rgba(102, 126, 234, 0.3);
+}
+
+/* ============================================
+   LOADING STATES
+   ============================================ */
+
+.loading-spinner {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .loading-spinner i {
+  color: var(--primary-purple);
+}
+
+/* ============================================
+   EMPTY STATES
+   ============================================ */
+
+.empty-state {
+  color: var(--text-tertiary);
+}
+
+.empty-state i {
+  color: var(--text-secondary);
+}
+
+/* ============================================
+   ALERTS & NOTIFICATIONS
+   ============================================ */
+
+.alert-success {
+  background: rgba(72, 187, 120, 0.1);
+  border-color: var(--success-color);
+  color: var(--success-color);
+}
+
+.alert-warning {
+  background: rgba(237, 137, 54, 0.1);
+  border-color: var(--warning-color);
+  color: var(--warning-color);
+}
+
+.alert-danger,
+.alert-error {
+  background: rgba(245, 101, 101, 0.1);
+  border-color: var(--error-color);
+  color: var(--error-color);
+}
+
+.alert-info {
+  background: rgba(66, 153, 225, 0.1);
+  border-color: var(--info-color);
+  color: var(--info-color);
+}
+
+/* ============================================
+   SYNTAX HIGHLIGHTING (if used)
+   ============================================ */
+
+[data-theme="dark"] .hljs {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+/* ============================================
+   PRINT MODE (always light)
+   ============================================ */
+
+@media print {
+  :root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #ffffff;
+    --bg-card: #ffffff;
+    --text-primary: #000000;
+    --text-secondary: #333333;
+    --border-color: #cccccc;
+  }
+}
+
+/* ============================================
+   SYSTEM PREFERENCE DETECTION
+   ============================================ */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg-primary: #1a202c;
+    --bg-secondary: #2d3748;
+    --bg-tertiary: #374151;
+    --bg-card: #2d3748;
+    --text-primary: #e2e8f0;
+    --text-secondary: #a0aec0;
+    --text-tertiary: #718096;
+    --border-color: #4a5568;
+  }
+}
+
+/* ============================================
+   ACCESSIBILITY - HIGH CONTRAST
+   ============================================ */
+
+@media (prefers-contrast: high) {
+  :root {
+    --border-color: #000000;
+    --text-primary: #000000;
+  }
+
+  [data-theme="dark"] {
+    --border-color: #ffffff;
+    --text-primary: #ffffff;
+  }
+}
