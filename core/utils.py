@@ -16,6 +16,11 @@ def extract_hashtags(text):
         return []
     return list(set(re.findall(r"#(\w+)", text)))
 
+def extract_mentions(text):
+    if not text:
+        return []
+    return list(set(re.findall(r"@(\w+)", text)))
+
 def send_sms(to_number, body):
     try:
         client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)

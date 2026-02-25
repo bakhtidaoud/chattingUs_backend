@@ -1,7 +1,7 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .models import CustomUser, Profile, UserEmailVerification, PostMedia, Post, Comment, Hashtag
-from .utils import send_verification_email, generate_video_thumbnail, extract_hashtags
+from .models import CustomUser, Profile, UserEmailVerification, PostMedia, Post, Comment, Hashtag, Notification
+from .utils import send_verification_email, generate_video_thumbnail, extract_hashtags, extract_mentions
 
 @receiver(post_save, sender=CustomUser)
 def create_user_related_models(sender, instance, created, **kwargs):
@@ -46,10 +46,40 @@ def handle_hashtags(instance, text):
             tag.count = 1
             tag.save()
 
+def handle_mentions(instance, text):
+    mentioned_usernames = extract_mentions(text)
+    if not mentioned_usernames:
+        return
+
+    # Find users
+    mentioned_users = CustomUser.objects.filter(username__in=mentioned_usernames)
+    
+    # Update M2M
+    instance.mentions.set(mentioned_users)
+    
+    # Create notifications
+    sender = instance.user
+    for mentioned_user in mentioned_users:
+        if mentioned_user != sender:
+            kwargs = {
+                'recipient': mentioned_user,
+                'sender': sender,
+                'notification_type': 'mention',
+            }
+            if isinstance(instance, Post):
+                kwargs['post'] = instance
+            else:
+                kwargs['comment'] = instance
+                kwargs['post'] = instance.post
+            
+            Notification.objects.get_or_create(**kwargs)
+
 @receiver(post_save, sender=Post)
-def process_post_hashtags(sender, instance, **kwargs):
+def process_post_content(sender, instance, **kwargs):
     handle_hashtags(instance, instance.caption)
+    handle_mentions(instance, instance.caption)
 
 @receiver(post_save, sender=Comment)
-def process_comment_hashtags(sender, instance, **kwargs):
+def process_comment_content(sender, instance, **kwargs):
     handle_hashtags(instance, instance.content)
+    handle_mentions(instance, instance.content)

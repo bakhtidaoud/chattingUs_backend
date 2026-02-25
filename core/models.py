@@ -264,3 +264,91 @@ class StoryView(models.Model):
 
     def __str__(self):
         return f"{self.user.username} viewed {self.story.id}"
+
+class StoryReaction(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    story = models.ForeignKey(Story, on_delete=models.CASCADE, related_name='reactions')
+    emoji = models.CharField(max_length=20) # Storing emoji as string
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'story')
+
+    def __str__(self):
+        return f"{self.user.username} reacted {self.emoji} to {self.story.id}"
+
+class Highlight(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='highlights')
+    name = models.CharField(max_length=100)
+    cover_image = models.ImageField(upload_to='highlights/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username}'s Highlight: {self.name}"
+
+class HighlightItem(models.Model):
+    highlight = models.ForeignKey(Highlight, on_delete=models.CASCADE, related_name='items')
+    story = models.ForeignKey(Story, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('highlight', 'story')
+
+    def __str__(self):
+        return f"Story {self.story.id} in highlight {self.highlight.name}"
+
+class Category(models.Model):
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(unique=True)
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
+    image = models.ImageField(upload_to='categories/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = 'Categories'
+
+    def __str__(self):
+        return self.name
+
+class Listing(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='listings')
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='listings')
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.title
+
+class AttributeDefinition(models.Model):
+    TYPE_CHOICES = [
+        ('text', 'Text'),
+        ('number', 'Number'),
+        ('select', 'Select'),
+    ]
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='attribute_definitions')
+    name = models.CharField(max_length=100)
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+
+    def __str__(self):
+        return f"{self.category.name} - {self.name}"
+
+class AttributeOption(models.Model):
+    attribute = models.ForeignKey(AttributeDefinition, on_delete=models.CASCADE, related_name='options')
+    value = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.value
+
+class ListingAttributeValue(models.Model):
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name='attribute_values')
+    attribute = models.ForeignKey(AttributeDefinition, on_delete=models.CASCADE)
+    value = models.TextField() # Storing all values as text
+
+    class Meta:
+        unique_together = ('listing', 'attribute')
+
+    def __str__(self):
+        return f"{self.listing.title} - {self.attribute.name}: {self.value}"

@@ -6,7 +6,8 @@ from .views import (
     VerifyEmailView, ResendVerificationView,
     EnableSMSView, VerifySMSView, Disable2FAView, StaticBackupCodesView,
     PostViewSet, CommentViewSet, HashtagViewSet, UserViewSet, FollowViewSet, NotificationViewSet,
-    SavedCollectionViewSet, SavedItemViewSet, StoryViewSet
+    SavedCollectionViewSet, SavedItemViewSet, StoryViewSet, HighlightViewSet, CategoryViewSet,
+    ListingViewSet, AttributeDefinitionViewSet
 )
 from rest_framework.routers import DefaultRouter
 
@@ -20,6 +21,10 @@ router.register(r'notifications', NotificationViewSet, basename='notification')
 router.register(r'collections', SavedCollectionViewSet, basename='collection')
 router.register(r'saved-items', SavedItemViewSet, basename='saved-item')
 router.register(r'stories', StoryViewSet, basename='story')
+router.register(r'highlights', HighlightViewSet, basename='highlight')
+router.register(r'categories', CategoryViewSet, basename='category')
+router.register(r'listings', ListingViewSet, basename='listing')
+router.register(r'attributes', AttributeDefinitionViewSet, basename='attribute')
 
 urlpatterns = [
     path('', include(router.urls)),

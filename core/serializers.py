@@ -121,7 +121,7 @@ class PostSerializer(TaggitSerializer, serializers.ModelSerializer):
     def get_comments_count(self, obj):
         return obj.comments.count()
 
-from .models import Follow, Notification, Block, Mute, SavedCollection, SavedItem, Story, StoryView
+from .models import Follow, Notification, Block, Mute, SavedCollection, SavedItem, Story, StoryView, StoryReaction, Highlight, HighlightItem, Category, Listing, AttributeDefinition, AttributeOption, ListingAttributeValue
 
 class FollowSerializer(serializers.ModelSerializer):
     follower = UserSerializer(read_only=True)
@@ -177,10 +177,13 @@ class StorySerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     views_count = serializers.SerializerMethodField()
     is_viewed = serializers.SerializerMethodField()
+    reactions_count = serializers.SerializerMethodField()
+    user_reaction = serializers.SerializerMethodField()
 
     class Meta:
         model = Story
-        fields = ['id', 'user', 'media', 'created_at', 'expires_at', 'views_count', 'is_viewed']
+        fields = ['id', 'user', 'media', 'created_at', 'expires_at', 
+                  'views_count', 'is_viewed', 'reactions_count', 'user_reaction']
         read_only_fields = ['user', 'expires_at']
 
     def get_views_count(self, obj):
@@ -192,9 +195,106 @@ class StorySerializer(serializers.ModelSerializer):
             return obj.views.filter(user=request.user).exists()
         return False
 
+    def get_reactions_count(self, obj):
+        return obj.reactions.count()
+
+    def get_user_reaction(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            reaction = obj.reactions.filter(user=request.user).first()
+            return reaction.emoji if reaction else None
+        return None
+
 class StoryViewSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     
     class Meta:
         model = StoryView
         fields = ['id', 'user', 'story', 'viewed_at']
+
+class StoryReactionSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    
+    class Meta:
+        model = StoryReaction
+        fields = ['id', 'user', 'story', 'emoji', 'created_at']
+
+class HighlightItemSerializer(serializers.ModelSerializer):
+    story = StorySerializer(read_only=True)
+
+    class Meta:
+        model = HighlightItem
+        fields = ['id', 'highlight', 'story', 'created_at']
+
+class HighlightSerializer(serializers.ModelSerializer):
+    items = HighlightItemSerializer(many=True, read_only=True)
+    items_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Highlight
+        fields = ['id', 'user', 'name', 'cover_image', 'items', 'items_count', 'created_at']
+        read_only_fields = ['user']
+
+    def get_items_count(self, obj):
+        return obj.items.count()
+
+class AttributeOptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AttributeOption
+        fields = ['id', 'value']
+
+class AttributeDefinitionSerializer(serializers.ModelSerializer):
+    options = AttributeOptionSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = AttributeDefinition
+        fields = ['id', 'name', 'type', 'options']
+
+class CategorySerializer(serializers.ModelSerializer):
+    children = serializers.SerializerMethodField()
+    attribute_definitions = AttributeDefinitionSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Category
+        fields = ['id', 'name', 'slug', 'image', 'parent', 'children', 'attribute_definitions', 'created_at']
+
+    def get_children(self, obj):
+        if obj.children.exists():
+            return CategorySerializer(obj.children.all(), many=True).data
+        return []
+
+class ListingAttributeValueSerializer(serializers.ModelSerializer):
+    attribute_name = serializers.ReadOnlyField(source='attribute.name')
+    attribute_type = serializers.ReadOnlyField(source='attribute.type')
+
+    class Meta:
+        model = ListingAttributeValue
+        fields = ['id', 'attribute', 'attribute_name', 'attribute_type', 'value']
+
+class ListingSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    attribute_values = ListingAttributeValueSerializer(many=True, required=False)
+
+    class Meta:
+        model = Listing
+        fields = ['id', 'user', 'category', 'title', 'description', 'price', 'attribute_values', 'created_at', 'updated_at']
+        read_only_fields = ['user']
+
+    def create(self, validated_data):
+        attribute_values_data = validated_data.pop('attribute_values', [])
+        listing = Listing.objects.create(**validated_data)
+        for attr_data in attribute_values_data:
+            ListingAttributeValue.objects.create(listing=listing, **attr_data)
+        return listing
+
+    def update(self, instance, validated_data):
+        attribute_values_data = validated_data.pop('attribute_values', None)
+        instance = super().update(instance, validated_data)
+        
+        if attribute_values_data is not None:
+            # Simple update: clear and recreate
+            instance.attribute_values.all().delete()
+            for attr_data in attribute_values_data:
+                ListingAttributeValue.objects.create(listing=instance, **attr_data)
+        
+        return instance

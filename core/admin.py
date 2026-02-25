@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, Profile, Post, PostMedia, SMSDevice, Like, Comment, Hashtag, Follow, Notification, Block, Mute, FeedPost
+from .models import CustomUser, Profile, Post, PostMedia, SMSDevice, Like, Comment, Hashtag, Follow, Notification, Block, Mute, FeedPost, Story, StoryView, StoryReaction, Highlight, HighlightItem, Category, Listing, AttributeDefinition, AttributeOption, ListingAttributeValue
 
 class ProfileInline(admin.StackedInline):
     model = Profile
@@ -71,3 +71,59 @@ class FeedPostAdmin(admin.ModelAdmin):
     list_filter = ['source']
 
 admin.site.register(FeedPost, FeedPostAdmin)
+
+class StoryAdmin(admin.ModelAdmin):
+    list_display = ['user', 'created_at', 'expires_at']
+    list_filter = ['created_at', 'expires_at']
+
+class StoryViewAdmin(admin.ModelAdmin):
+    list_display = ['user', 'story', 'viewed_at']
+
+admin.site.register(Story, StoryAdmin)
+admin.site.register(StoryView, StoryViewAdmin)
+
+class StoryReactionAdmin(admin.ModelAdmin):
+    list_display = ['user', 'story', 'emoji', 'created_at']
+
+admin.site.register(StoryReaction, StoryReactionAdmin)
+
+class HighlightItemInline(admin.TabularInline):
+    model = HighlightItem
+    extra = 1
+
+class HighlightAdmin(admin.ModelAdmin):
+    inlines = [HighlightItemInline]
+    list_display = ['user', 'name', 'created_at']
+    search_fields = ['name', 'user__username']
+
+admin.site.register(Highlight, HighlightAdmin)
+
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ['name', 'slug', 'parent', 'created_at']
+    prepopulated_fields = {'slug': ('name',)}
+    search_fields = ['name']
+
+admin.site.register(Category, CategoryAdmin)
+
+class AttributeOptionInline(admin.TabularInline):
+    model = AttributeOption
+    extra = 1
+
+class AttributeDefinitionAdmin(admin.ModelAdmin):
+    inlines = [AttributeOptionInline]
+    list_display = ['name', 'category', 'type']
+    list_filter = ['category', 'type']
+
+admin.site.register(AttributeDefinition, AttributeDefinitionAdmin)
+
+class ListingAttributeValueInline(admin.TabularInline):
+    model = ListingAttributeValue
+    extra = 1
+
+class ListingAdmin(admin.ModelAdmin):
+    inlines = [ListingAttributeValueInline]
+    list_display = ['title', 'user', 'category', 'price', 'created_at']
+    list_filter = ['category', 'created_at']
+    search_fields = ['title', 'description', 'user__username']
+
+admin.site.register(Listing, ListingAdmin)

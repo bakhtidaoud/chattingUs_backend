@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 import random
 from django.utils import timezone
-from .models import CustomUser, UserEmailVerification, SMSDevice, Post, PostMedia, Like, Comment, Hashtag, Follow, Notification, Block, Mute, FeedPost, SavedCollection, SavedItem, Story, StoryView
+from .models import CustomUser, UserEmailVerification, SMSDevice, Post, PostMedia, Like, Comment, Hashtag, Follow, Notification, Block, Mute, FeedPost, SavedCollection, SavedItem, Story, StoryView, StoryReaction, Highlight, HighlightItem, Category, Listing, AttributeDefinition, ListingAttributeValue
 from .utils import send_verification_email, send_sms
 from django_otp.plugins.otp_static.models import StaticDevice, StaticToken
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -16,7 +16,9 @@ from .serializers import (
     HashtagSerializer, FollowSerializer, NotificationSerializer,
     BlockSerializer, MuteSerializer,
     SavedCollectionSerializer, SavedItemSerializer,
-    StorySerializer, StoryViewSerializer
+    StorySerializer, StoryViewSerializer, StoryReactionSerializer,
+    HighlightSerializer, CategorySerializer,
+    AttributeDefinitionSerializer, ListingSerializer
 )
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -619,3 +621,114 @@ class StoryViewSet(viewsets.ModelViewSet):
         stories = self.get_queryset().filter(user_id__in=following_ids)
         serializer = self.get_serializer(stories, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def react(self, request, pk=None):
+        story = self.get_object()
+        emoji = request.data.get('emoji')
+        
+        if not emoji:
+            return Response({'error': 'Emoji is required.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        reaction, created = StoryReaction.objects.get_or_create(
+            user=request.user, 
+            story=story,
+            defaults={'emoji': emoji}
+        )
+        
+        if not created:
+            if reaction.emoji == emoji:
+                reaction.delete()
+                return Response({'status': 'reaction removed'}, status=status.HTTP_200_OK)
+            else:
+                reaction.emoji = emoji
+                reaction.save()
+                return Response({'status': 'reaction updated'}, status=status.HTTP_200_OK)
+                
+        return Response({'status': 'reaction added'}, status=status.HTTP_201_CREATED)
+
+class HighlightViewSet(viewsets.ModelViewSet):
+    serializer_class = HighlightSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get_queryset(self):
+        user_id = self.request.query_params.get('user_id')
+        if user_id:
+            return Highlight.objects.filter(user_id=user_id)
+        return Highlight.objects.all()
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def add_story(self, request, pk=None):
+        highlight = self.get_object()
+        if highlight.user != request.user:
+            return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+            
+        story_id = request.data.get('story_id')
+        try:
+            story = Story.objects.get(id=story_id)
+            if story.user != request.user:
+                return Response({'error': 'Can only add your own stories to highlights'}, status=status.HTTP_400_BAD_REQUEST)
+        except Story.DoesNotExist:
+            return Response({'error': 'Story not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+        item, created = HighlightItem.objects.get_or_create(highlight=highlight, story=story)
+        if not created:
+            item.delete()
+            return Response({'status': 'story removed from highlight'}, status=status.HTTP_200_OK)
+            
+        return Response({'status': 'story added to highlight'}, status=status.HTTP_201_CREATED)
+
+class CategoryViewSet(viewsets.ModelViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get_queryset(self):
+        # Allow filtering to get only top-level (root) categories
+        roots_only = self.request.query_params.get('roots_only')
+        if roots_only == 'true':
+            return Category.objects.filter(parent__isnull=True)
+        return super().get_queryset()
+
+class AttributeDefinitionViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = AttributeDefinition.objects.all()
+    serializer_class = AttributeDefinitionSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get_queryset(self):
+        category_id = self.request.query_params.get('category')
+        if category_id:
+            return AttributeDefinition.objects.filter(category_id=category_id)
+        return super().get_queryset()
+
+class ListingViewSet(viewsets.ModelViewSet):
+    serializer_class = ListingSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get_queryset(self):
+        queryset = Listing.objects.all()
+        category_id = self.request.query_params.get('category')
+        if category_id:
+            queryset = queryset.filter(category_id=category_id)
+        
+        # Attribute filtering: ?attr_1=M&attr_5=Blue
+        for param, value in self.request.query_params.items():
+            if param.startswith('attr_'):
+                try:
+                    attr_split = param.split('_')
+                    if len(attr_split) > 1:
+                        attr_id = attr_split[1]
+                        queryset = queryset.filter(
+                            attribute_values__attribute_id=attr_id,
+                            attribute_values__value=value
+                        )
+                except (IndexError, ValueError):
+                    continue
+        
+        return queryset
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
