@@ -5,13 +5,21 @@ from .views import (
     PasswordChangeView, PasswordResetRequestView, PasswordResetConfirmView,
     VerifyEmailView, ResendVerificationView,
     EnableSMSView, VerifySMSView, Disable2FAView, StaticBackupCodesView,
-    PostViewSet, CommentViewSet
+    PostViewSet, CommentViewSet, HashtagViewSet, UserViewSet, FollowViewSet, NotificationViewSet,
+    SavedCollectionViewSet, SavedItemViewSet, StoryViewSet
 )
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
 router.register(r'posts', PostViewSet, basename='post')
 router.register(r'comments', CommentViewSet, basename='comment')
+router.register(r'hashtags', HashtagViewSet, basename='hashtag')
+router.register(r'users', UserViewSet, basename='user')
+router.register(r'follows', FollowViewSet, basename='follow')
+router.register(r'notifications', NotificationViewSet, basename='notification')
+router.register(r'collections', SavedCollectionViewSet, basename='collection')
+router.register(r'saved-items', SavedItemViewSet, basename='saved-item')
+router.register(r'stories', StoryViewSet, basename='story')
 
 urlpatterns = [
     path('', include(router.urls)),

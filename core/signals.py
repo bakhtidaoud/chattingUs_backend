@@ -1,7 +1,7 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .models import CustomUser, Profile, UserEmailVerification, PostMedia
-from .utils import send_verification_email, generate_video_thumbnail
+from .models import CustomUser, Profile, UserEmailVerification, PostMedia, Post, Comment, Hashtag
+from .utils import send_verification_email, generate_video_thumbnail, extract_hashtags
 
 @receiver(post_save, sender=CustomUser)
 def create_user_related_models(sender, instance, created, **kwargs):
@@ -20,3 +20,36 @@ def save_user_related_models(sender, instance, **kwargs):
 def create_post_media_thumbnail(sender, instance, created, **kwargs):
     if created and instance.media_type == 'video' and not instance.thumbnail:
         generate_video_thumbnail(instance)
+
+def handle_hashtags(instance, text):
+    tags = extract_hashtags(text)
+    current_tags = set(instance.hashtags.values_list('name', flat=True))
+    new_tags = set(tags)
+
+    to_add = new_tags - current_tags
+    to_remove = current_tags - new_tags
+
+    for tag_name in to_remove:
+        tag = Hashtag.objects.filter(name=tag_name).first()
+        if tag:
+            instance.hashtags.remove(tag)
+            tag.count = max(0, tag.count - 1)
+            tag.save()
+
+    for tag_name in to_add:
+        tag, created = Hashtag.objects.get_or_create(name=tag_name)
+        instance.hashtags.add(tag)
+        if not created:
+            tag.count += 1
+            tag.save()
+        else:
+            tag.count = 1
+            tag.save()
+
+@receiver(post_save, sender=Post)
+def process_post_hashtags(sender, instance, **kwargs):
+    handle_hashtags(instance, instance.caption)
+
+@receiver(post_save, sender=Comment)
+def process_comment_hashtags(sender, instance, **kwargs):
+    handle_hashtags(instance, instance.content)

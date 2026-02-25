@@ -80,6 +80,7 @@ class Post(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     tags = TaggableManager()
+    hashtags = models.ManyToManyField('Hashtag', blank=True, related_name='posts')
 
     def __str__(self):
         return f"Post by {self.user.username} - {self.id}"
@@ -129,6 +130,137 @@ class Comment(models.Model):
     mentions = models.ManyToManyField(CustomUser, blank=True, related_name='comment_mentions')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    hashtags = models.ManyToManyField('Hashtag', blank=True, related_name='comments')
 
     def __str__(self):
         return f"Comment by {self.user.username} on Post {self.post.id}"
+
+class Hashtag(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    count = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"#{self.name} ({self.count})"
+
+class Follow(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+    ]
+    follower = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='following')
+    followed = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='followers')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='accepted')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('follower', 'followed')
+
+    def __str__(self):
+        return f"{self.follower.username} -> {self.followed.username} ({self.status})"
+
+class Notification(models.Model):
+    NOTIFICATION_TYPES = [
+        ('follow_request', 'Follow Request'),
+        ('follow_accept', 'Follow Accept'),
+        ('like', 'Like'),
+        ('comment', 'Comment'),
+        ('mention', 'Mention'),
+    ]
+    recipient = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='notifications')
+    sender = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='sent_notifications')
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
+    post = models.ForeignKey('Post', on_delete=models.CASCADE, null=True, blank=True)
+    comment = models.ForeignKey('Comment', on_delete=models.CASCADE, null=True, blank=True)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Notification for {self.recipient.username} from {self.sender.username}"
+
+class Block(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='blocking')
+    blocked_user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='blocked_by')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'blocked_user')
+
+    def __str__(self):
+        return f"{self.user.username} blocked {self.blocked_user.username}"
+
+class Mute(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='muting')
+    muted_user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='muted_by')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'muted_user')
+
+    def __str__(self):
+        return f"{self.user.username} muted {self.muted_user.username}"
+
+class FeedPost(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='feed_posts')
+    post = models.ForeignKey('Post', on_delete=models.CASCADE)
+    source = models.CharField(max_length=50, default='following') # 'following', 'suggested', etc.
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ('user', 'post')
+
+    def __str__(self):
+        return f"Feed entry for {self.user.username}: {self.post.id}"
+
+class SavedCollection(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='saved_collections')
+    name = models.CharField(max_length=100)
+    is_private = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'name')
+
+    def __str__(self):
+        return f"{self.user.username}'s Collection: {self.name}"
+
+class SavedItem(models.Model):
+    collection = models.ForeignKey(SavedCollection, on_delete=models.CASCADE, related_name='items')
+    post = models.ForeignKey('Post', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('collection', 'post')
+
+    def __str__(self):
+        return f"Post {self.post.id} in {self.collection.name}"
+
+class Story(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='stories')
+    media = models.FileField(upload_to='stories/')
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if not self.expires_at:
+            self.expires_at = timezone.now() + timezone.timedelta(hours=24)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Story by {self.user.username} - {self.id}"
+
+class StoryView(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    story = models.ForeignKey(Story, on_delete=models.CASCADE, related_name='views')
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'story')
+
+    def __str__(self):
+        return f"{self.user.username} viewed {self.story.id}"

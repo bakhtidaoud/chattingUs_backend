@@ -7,8 +7,14 @@ from moviepy import VideoFileClip
 from django.core.files.base import ContentFile
 import os
 import logging
+import re
 
 logger = logging.getLogger(__name__)
+
+def extract_hashtags(text):
+    if not text:
+        return []
+    return list(set(re.findall(r"#(\w+)", text)))
 
 def send_sms(to_number, body):
     try:

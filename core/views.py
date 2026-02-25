@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 import random
 from django.utils import timezone
-from .models import CustomUser, UserEmailVerification, SMSDevice, Post, PostMedia, Like, Comment
+from .models import CustomUser, UserEmailVerification, SMSDevice, Post, PostMedia, Like, Comment, Hashtag, Follow, Notification, Block, Mute, FeedPost, SavedCollection, SavedItem, Story, StoryView
 from .utils import send_verification_email, send_sms
 from django_otp.plugins.otp_static.models import StaticDevice, StaticToken
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -12,7 +12,11 @@ from django.contrib.auth import get_user_model
 from .serializers import (
     RegisterSerializer, UserSerializer, CustomTokenObtainPairSerializer, 
     CustomTokenObtainSlidingSerializer, PasswordChangeSerializer,
-    PostSerializer, PostMediaSerializer, LikeSerializer, CommentSerializer
+    PostSerializer, PostMediaSerializer, LikeSerializer, CommentSerializer,
+    HashtagSerializer, FollowSerializer, NotificationSerializer,
+    BlockSerializer, MuteSerializer,
+    SavedCollectionSerializer, SavedItemSerializer,
+    StorySerializer, StoryViewSerializer
 )
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -232,9 +236,23 @@ class StaticBackupCodesView(APIView):
             return Response({'error': 'No backup codes found.'}, status=status.HTTP_400_BAD_REQUEST)
 
 class PostViewSet(viewsets.ModelViewSet):
-    queryset = Post.objects.all().order_by('-created_at')
     serializer_class = PostSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Post.objects.all().order_by('-created_at')
+        if user.is_authenticated:
+            # Exclude posts from blocked users and users who blocked me
+            blocked_users = Block.objects.filter(user=user).values_list('blocked_user', flat=True)
+            blocked_by_users = Block.objects.filter(blocked_user=user).values_list('user', flat=True)
+            # Exclude posts from muted users
+            muted_users = Mute.objects.filter(user=user).values_list('muted_user', flat=True)
+            
+            queryset = queryset.exclude(user__in=blocked_users)
+            queryset = queryset.exclude(user__in=blocked_by_users)
+            queryset = queryset.exclude(user__in=muted_users)
+        return queryset
 
     def perform_create(self, serializer):
         post = serializer.save(user=self.request.user)
@@ -288,10 +306,316 @@ class PostViewSet(viewsets.ModelViewSet):
         serializer = CommentSerializer(comments, many=True)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def save(self, request, pk=None):
+        post = self.get_object()
+        collection_id = request.data.get('collection_id')
+        
+        # Default to "All Saved" collection if not specified
+        if not collection_id:
+            collection, created = SavedCollection.objects.get_or_create(
+                user=request.user,
+                name='All Saved',
+                defaults={'is_private': True}
+            )
+        else:
+            try:
+                collection = SavedCollection.objects.get(id=collection_id, user=request.user)
+            except SavedCollection.DoesNotExist:
+                return Response({'error': 'Collection not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        saved_item, created = SavedItem.objects.get_or_create(collection=collection, post=post)
+        if not created:
+            saved_item.delete()
+            return Response({'status': 'unsaved'}, status=status.HTTP_200_OK)
+            
+        return Response({'status': 'saved'}, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def feed(self, request):
+        user = request.user
+        # Get post IDs from pre-computed feed
+        feed_posts = FeedPost.objects.filter(user=user).values_list('post_id', flat=True)
+        posts = Post.objects.filter(id__in=feed_posts).order_by('-created_at')
+        
+        page = self.paginate_queryset(posts)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+            
+        serializer = self.get_serializer(posts, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def by_hashtag(self, request):
+        hashtag_name = request.query_params.get('hashtag')
+        if not hashtag_name:
+            return Response({'error': 'hashtag query parameter is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        posts = self.queryset.filter(hashtags__name=hashtag_name)
+        page = self.paginate_queryset(posts)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+            
+        serializer = self.get_serializer(posts, many=True)
+        return Response(serializer.data)
+
+class HashtagViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Hashtag.objects.all().order_by('-count')
+    serializer_class = HashtagSerializer
+
+    @action(detail=False, methods=['get'])
+    def trending(self, request):
+        trending_tags = self.queryset.filter(count__gt=0)[:10]
+        serializer = self.get_serializer(trending_tags, many=True)
+        return Response(serializer.data)
+
 class CommentViewSet(viewsets.ModelViewSet):
-    queryset = Comment.objects.all()
     serializer_class = CommentSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Comment.objects.all()
+        if user.is_authenticated:
+            blocked_users = Block.objects.filter(user=user).values_list('blocked_user', flat=True)
+            blocked_by_users = Block.objects.filter(blocked_user=user).values_list('user', flat=True)
+            queryset = queryset.exclude(user__in=blocked_users).exclude(user__in=blocked_by_users)
+        return queryset
+
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+class UserViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def follow(self, request, pk=None):
+        target_user = self.get_object()
+        if target_user == request.user:
+            return Response({'error': 'You cannot follow yourself.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        status_follow = 'pending' if target_user.is_private else 'accepted'
+        follow, created = Follow.objects.get_or_create(
+            follower=request.user,
+            followed=target_user,
+            defaults={'status': status_follow}
+        )
+        
+        if not created:
+            follow.delete()
+            return Response({'status': 'unfollowed'}, status=status.HTTP_200_OK)
+        
+        if status_follow == 'pending':
+            Notification.objects.create(
+                recipient=target_user,
+                sender=request.user,
+                notification_type='follow_request'
+            )
+            return Response({'status': 'requested'}, status=status.HTTP_201_CREATED)
+        else:
+            Notification.objects.create(
+                recipient=target_user,
+                sender=request.user,
+                notification_type='follow_accept'
+            )
+            return Response({'status': 'followed'}, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def block(self, request, pk=None):
+        target_user = self.get_object()
+        if target_user == request.user:
+            return Response({'error': 'You cannot block yourself.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        block, created = Block.objects.get_or_create(user=request.user, blocked_user=target_user)
+        if not created:
+            block.delete()
+            return Response({'status': 'unblocked'}, status=status.HTTP_200_OK)
+        
+        # Also unfollow automatically if blocking
+        Follow.objects.filter(follower=request.user, followed=target_user).delete()
+        Follow.objects.filter(follower=target_user, followed=request.user).delete()
+        
+        return Response({'status': 'blocked'}, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def mute(self, request, pk=None):
+        target_user = self.get_object()
+        if target_user == request.user:
+            return Response({'error': 'You cannot mute yourself.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        mute, created = Mute.objects.get_or_create(user=request.user, muted_user=target_user)
+        if not created:
+            mute.delete()
+            return Response({'status': 'unmuted'}, status=status.HTTP_200_OK)
+        
+        return Response({'status': 'muted'}, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def suggested(self, request):
+        from django.db.models import Count
+        user = request.user
+        my_following = Follow.objects.filter(follower=user).values_list('followed_id', flat=True)
+        blocked_ids = Block.objects.filter(user=user).values_list('blocked_user_id', flat=True)
+        blocked_by_ids = Block.objects.filter(blocked_user=user).values_list('user_id', flat=True)
+        
+        exclude_ids = list(my_following) + [user.id] + list(blocked_ids) + list(blocked_by_ids)
+        
+        # 1. Mutual Follows (People followed by people I follow)
+        mutual_follow_candidates = Follow.objects.filter(
+            follower_id__in=my_following,
+            status='accepted'
+        ).exclude(followed_id__in=exclude_ids).values('followed_id').annotate(mutual_count=Count('followed_id'))
+        
+        # 2. Location matches
+        location_candidates = User.objects.filter(
+            location__iexact=user.location
+        ).exclude(id__in=exclude_ids).values_list('id', flat=True) if user.location else []
+        
+        # Merge all candidates
+        candidate_ids = set([c['followed_id'] for c in mutual_follow_candidates])
+        candidate_ids.update(location_candidates)
+        
+        # If very few candidates, add some random active users
+        if len(candidate_ids) < 10:
+            random_users = User.objects.filter(is_active=True).exclude(id__in=exclude_ids).order_by('?')[:10]
+            candidate_ids.update([u.id for u in random_users])
+            
+        users_qset = User.objects.filter(id__in=candidate_ids).select_related('profile')
+        
+        suggestions = []
+        my_interests = set(user.profile.interests) if hasattr(user, 'profile') else set()
+        mutual_counts = {c['followed_id']: c['mutual_count'] for c in mutual_follow_candidates}
+        
+        for potential in users_qset:
+            score = 0
+            reasons = []
+            
+            # Mutuals factor
+            m_count = mutual_counts.get(potential.id, 0)
+            if m_count > 0:
+                score += m_count * 10
+                reasons.append(f"Followed by {m_count} people you follow")
+            
+            # Location factor
+            if user.location and potential.location and potential.location.lower() == user.location.lower():
+                score += 8
+                reasons.append(f"Living in {user.location}")
+                
+            # Interests factor
+            if hasattr(potential, 'profile'):
+                pot_interests = set(potential.profile.interests)
+                common = my_interests.intersection(pot_interests)
+                if common:
+                    score += len(common) * 5
+                    reasons.append(f"Shared interests: {', '.join(list(common)[:2])}")
+            
+            if score > 0 or not suggestions: # include at least some if empty
+                suggestions.append({
+                    'user': UserSerializer(potential).data,
+                    'score': score,
+                    'reasons': reasons
+                })
+        
+        suggestions.sort(key=lambda x: x['score'], reverse=True)
+        
+        # Apply pagination to the raw list
+        page = self.paginate_queryset(suggestions)
+        if page is not None:
+             return self.get_paginated_response(page)
+        
+        return Response(suggestions)
+
+class FollowViewSet(viewsets.ModelViewSet):
+    queryset = Follow.objects.all()
+    serializer_class = FollowSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    @action(detail=True, methods=['post'])
+    def accept(self, request, pk=None):
+        follow = self.get_object()
+        if follow.followed != request.user:
+            return Response({'error': 'Not authorized.'}, status=status.HTTP_403_FORBIDDEN)
+        
+        follow.status = 'accepted'
+        follow.save()
+        
+        Notification.objects.create(
+            recipient=follow.follower,
+            sender=request.user,
+            notification_type='follow_accept'
+        )
+        return Response({'status': 'accepted'})
+
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        follow = self.get_object()
+        if follow.followed != request.user:
+            return Response({'error': 'Not authorized.'}, status=status.HTTP_403_FORBIDDEN)
+        
+        follow.status = 'rejected'
+        follow.save()
+        return Response({'status': 'rejected'})
+
+class NotificationViewSet(viewsets.ModelViewSet):
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Notification.objects.filter(recipient=self.request.user)
+
+    @action(detail=False, methods=['post'])
+    def mark_all_as_read(self, request):
+        self.get_queryset().update(is_read=True)
+        return Response({'status': 'all marked as read'})
+
+class SavedCollectionViewSet(viewsets.ModelViewSet):
+    serializer_class = SavedCollectionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return SavedCollection.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class SavedItemViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = SavedItemSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return SavedItem.objects.filter(collection__user=self.request.user)
+
+class StoryViewSet(viewsets.ModelViewSet):
+    serializer_class = StorySerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get_queryset(self):
+        # Only show active stories (non-expired)
+        return Story.objects.filter(expires_at__gt=timezone.now()).order_by('-created_at')
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def record_view(self, request, pk=None):
+        story = self.get_object()
+        if story.user == request.user:
+            return Response({'status': 'own story'}, status=status.HTTP_200_OK)
+            
+        view, created = StoryView.objects.get_or_create(user=request.user, story=story)
+        return Response({'status': 'view recorded'}, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def following_stories(self, request):
+        # Get stories only from people I follow
+        following_ids = Follow.objects.filter(
+            follower=request.user, 
+            status='accepted'
+        ).values_list('followed_id', flat=True)
+        
+        stories = self.get_queryset().filter(user_id__in=following_ids)
+        serializer = self.get_serializer(stories, many=True)
+        return Response(serializer.data)

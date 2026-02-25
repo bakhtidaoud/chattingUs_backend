@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, Profile, Post, PostMedia, SMSDevice, Like, Comment
+from .models import CustomUser, Profile, Post, PostMedia, SMSDevice, Like, Comment, Hashtag, Follow, Notification, Block, Mute, FeedPost
 
 class ProfileInline(admin.StackedInline):
     model = Profile
@@ -39,3 +39,35 @@ admin.site.register(Post, PostAdmin)
 admin.site.register(SMSDevice)
 admin.site.register(Like)
 admin.site.register(Comment)
+
+class HashtagAdmin(admin.ModelAdmin):
+    list_display = ['name', 'count', 'created_at']
+    search_fields = ['name']
+
+admin.site.register(Hashtag, HashtagAdmin)
+
+class FollowAdmin(admin.ModelAdmin):
+    list_display = ['follower', 'followed', 'status', 'created_at']
+    list_filter = ['status']
+
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ['recipient', 'sender', 'notification_type', 'is_read', 'created_at']
+    list_filter = ['notification_type', 'is_read']
+
+admin.site.register(Follow, FollowAdmin)
+admin.site.register(Notification, NotificationAdmin)
+
+class BlockAdmin(admin.ModelAdmin):
+    list_display = ['user', 'blocked_user', 'created_at']
+
+class MuteAdmin(admin.ModelAdmin):
+    list_display = ['user', 'muted_user', 'created_at']
+
+admin.site.register(Block, BlockAdmin)
+admin.site.register(Mute, MuteAdmin)
+
+class FeedPostAdmin(admin.ModelAdmin):
+    list_display = ['user', 'post', 'source', 'created_at']
+    list_filter = ['source']
+
+admin.site.register(FeedPost, FeedPostAdmin)
