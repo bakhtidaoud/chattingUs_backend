@@ -193,4 +193,12 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.delete_expired_stories',
         'schedule': crontab(minute=0, hour='*'),
     },
+    'check-expired-listings-daily': {
+        'task': 'core.tasks.check_expired_listings',
+        'schedule': crontab(minute=30, hour=0), # Run at 00:30 daily
+    },
+    'process-saved-searches-hourly': {
+        'task': 'core.tasks.process_saved_searches',
+        'schedule': crontab(minute=0, hour='*'),
+    },
 }

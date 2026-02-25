@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 import random
 from django.utils import timezone
-from .models import CustomUser, UserEmailVerification, SMSDevice, Post, PostMedia, Like, Comment, Hashtag, Follow, Notification, Block, Mute, FeedPost, SavedCollection, SavedItem, Story, StoryView, StoryReaction, Highlight, HighlightItem, Category, Listing, AttributeDefinition, ListingAttributeValue
+from .models import CustomUser, UserEmailVerification, SMSDevice, Post, PostMedia, Like, Comment, Hashtag, Follow, Notification, Block, Mute, FeedPost, SavedCollection, SavedItem, Story, StoryView, StoryReaction, Highlight, HighlightItem, Category, Listing, AttributeDefinition, ListingAttributeValue, ListingPromotion, SavedSearch, Conversation, Message, Offer, Report, Order, Dispute, DisputeMessage
 from .utils import send_verification_email, send_sms
 from django_otp.plugins.otp_static.models import StaticDevice, StaticToken
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -18,7 +18,9 @@ from .serializers import (
     SavedCollectionSerializer, SavedItemSerializer,
     StorySerializer, StoryViewSerializer, StoryReactionSerializer,
     HighlightSerializer, CategorySerializer,
-    AttributeDefinitionSerializer, ListingSerializer
+    AttributeDefinitionSerializer, ListingSerializer, ListingPromotionSerializer,
+    SavedSearchSerializer, ConversationSerializer, MessageSerializer, OfferSerializer,
+    ReportSerializer, OrderSerializer, DisputeSerializer, DisputeMessageSerializer
 )
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -714,6 +716,14 @@ class ListingViewSet(viewsets.ModelViewSet):
         if category_id:
             queryset = queryset.filter(category_id=category_id)
         
+        # Base filtering
+        if self.request.user.is_authenticated:
+            # Authors can see their own content, others only see active
+            from django.db.models import Q
+            queryset = queryset.filter(Q(status='active') | Q(user=self.request.user))
+        else:
+            queryset = queryset.filter(status='active')
+
         # Attribute filtering: ?attr_1=M&attr_5=Blue
         for param, value in self.request.query_params.items():
             if param.startswith('attr_'):
@@ -727,8 +737,283 @@ class ListingViewSet(viewsets.ModelViewSet):
                         )
                 except (IndexError, ValueError):
                     continue
+
+        # Order by active promotions (Featured first, then Urgent)
+        now = timezone.now()
+        from django.db.models import Exists, OuterRef
+        
+        featured_exists = ListingPromotion.objects.filter(
+            listing=OuterRef('pk'),
+            promotion_type='featured',
+            is_active=True,
+            start_date__lte=now,
+            end_date__gte=now
+        )
+        
+        urgent_exists = ListingPromotion.objects.filter(
+            listing=OuterRef('pk'),
+            promotion_type='urgent',
+            is_active=True,
+            start_date__lte=now,
+            end_date__gte=now
+        )
+
+        queryset = queryset.annotate(
+            is_featured=Exists(featured_exists),
+            is_urgent=Exists(urgent_exists)
+        ).order_by('-is_featured', '-is_urgent', '-created_at')
         
         return queryset
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def renew(self, request, pk=None):
+        listing = self.get_object()
+        if listing.user != request.user:
+            return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+        
+        # Extend by 30 days and reset to active if expired
+        listing.expires_at = timezone.now() + timezone.timedelta(days=30)
+        if listing.status == 'expired':
+            listing.status = 'active'
+        listing.save()
+        
+        return Response({'status': 'renewed', 'expires_at': listing.expires_at})
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def contact_seller(self, request, pk=None):
+        listing = self.get_object()
+        seller = listing.user
+        buyer = request.user
+
+        if seller == buyer:
+            return Response({'error': 'You cannot contact yourself'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Find or create conversation
+        conversation = Conversation.objects.filter(participants=buyer).filter(participants=seller).first()
+        if not conversation:
+            conversation = Conversation.objects.create()
+            conversation.participants.add(buyer, seller)
+
+        # Create pre-filled message
+        message_text = f"Hi {seller.username}, I'm interested in your listing: {listing.title}.\nLink: http://localhost:3000/listings/{listing.id}/"
+        
+        Message.objects.create(
+            conversation=conversation,
+            sender=buyer,
+            text=message_text
+        )
+
+        return Response({
+            'status': 'conversation started',
+            'conversation_id': conversation.id
+        }, status=status.HTTP_201_CREATED)
+
+class ListingPromotionViewSet(viewsets.ModelViewSet):
+    serializer_class = ListingPromotionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return ListingPromotion.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        # In a real app, you would integrate a payment gateway here.
+        # For now, we simulate a successful transaction.
+        serializer.save(
+            user=self.request.user,
+            is_active=True,
+            transaction_id=f"TRANS_{random.getrandbits(32)}"
+        )
+
+class SavedSearchViewSet(viewsets.ModelViewSet):
+    serializer_class = SavedSearchSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return SavedSearch.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class ConversationViewSet(viewsets.ModelViewSet):
+    serializer_class = ConversationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return self.request.user.conversations.all()
+
+class MessageViewSet(viewsets.ModelViewSet):
+    serializer_class = MessageSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        conversation_id = self.request.query_params.get('conversation')
+        if conversation_id:
+            return Message.objects.filter(
+                conversation_id=conversation_id,
+                conversation__participants=self.request.user
+            )
+        return Message.objects.none()
+
+    def perform_create(self, serializer):
+        serializer.save(sender=self.request.user)
+
+class OfferViewSet(viewsets.ModelViewSet):
+    serializer_class = OfferSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Users see offers they received or sent
+        return Offer.objects.filter(
+            models.Q(listing__user=self.request.user) | 
+            models.Q(buyer=self.request.user)
+        )
+
+    def perform_create(self, serializer):
+        listing = serializer.validated_data['listing']
+        if listing.user == self.request.user:
+            raise serializers.ValidationError("You cannot make an offer on your own listing.")
+        serializer.save(buyer=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def accept(self, request, pk=None):
+        offer = self.get_object()
+        if offer.listing.user != request.user:
+            return Response({'error': 'Only the seller can accept offers'}, status=status.HTTP_403_FORBIDDEN)
+        
+        offer.status = 'accepted'
+        offer.save()
+        
+        # Mark listing as sold? Depending on business logic. 
+        # For now, just mark the offer.
+        return Response({'status': 'offer accepted'})
+
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        offer = self.get_object()
+        if offer.listing.user != request.user:
+            return Response({'error': 'Only the seller can reject offers'}, status=status.HTTP_403_FORBIDDEN)
+        
+        offer.status = 'rejected'
+        offer.save()
+        return Response({'status': 'offer rejected'})
+
+    @action(detail=True, methods=['post'])
+    def counter(self, request, pk=None):
+        offer = self.get_object()
+        if offer.listing.user != request.user:
+            return Response({'error': 'Only the seller can counter offers'}, status=status.HTTP_403_FORBIDDEN)
+        
+        amount = request.data.get('amount')
+        if not amount:
+            return Response({'error': 'Amount is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        offer.status = 'countered'
+        offer.countered_amount = amount
+        offer.save()
+        return Response({'status': 'counter-offer sent', 'amount': amount})
+
+class ReportViewSet(viewsets.ModelViewSet):
+    serializer_class = ReportSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return Report.objects.all()
+        return Report.objects.filter(reporter=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(reporter=self.request.user)
+
+    def perform_update(self, serializer):
+        if not self.request.user.is_staff:
+            raise permissions.PermissionDenied("Only staff can update report status")
+        serializer.save()
+
+class OrderViewSet(viewsets.ModelViewSet):
+    serializer_class = OrderSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Users see orders they bought or sold
+        return Order.objects.filter(
+            models.Q(buyer=self.request.user) | 
+            models.Q(seller=self.request.user)
+        )
+
+    def perform_create(self, serializer):
+        listing = serializer.validated_data['listing']
+        delivery_option = serializer.validated_data['delivery_option']
+        
+        # Validate delivery option
+        if delivery_option == 'shipping' and not listing.shipping_available:
+            raise serializers.ValidationError("Shipping is not available for this listing.")
+        if delivery_option == 'pickup' and not listing.local_pickup:
+            raise serializers.ValidationError("Local pickup is not available for this listing.")
+            
+        amount = listing.price or 0
+        if delivery_option == 'shipping' and listing.shipping_cost:
+            amount += listing.shipping_cost
+            
+        serializer.save(
+            buyer=self.request.user,
+            seller=listing.user,
+            amount=amount
+        )
+
+class DisputeViewSet(viewsets.ModelViewSet):
+    serializer_class = DisputeSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return Dispute.objects.all()
+        # Users see disputes related to their orders
+        return Dispute.objects.filter(
+            models.Q(order__buyer=self.request.user) | 
+            models.Q(order__seller=self.request.user)
+        )
+
+    def perform_create(self, serializer):
+        order = serializer.validated_data['order']
+        # Check if user is part of the order
+        if order.buyer != self.request.user and order.seller != self.request.user:
+            raise permissions.PermissionDenied("You are not part of this order")
+        serializer.save(created_by=self.request.user)
+
+    def perform_update(self, serializer):
+        if not self.request.user.is_staff:
+            # Users can't update status, only other fields if allowed (metadata?)
+            # For simplicity, only staff can update disputes for now
+            raise permissions.PermissionDenied("Only staff can update dispute details")
+        serializer.save()
+
+class DisputeMessageViewSet(viewsets.ModelViewSet):
+    serializer_class = DisputeMessageSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        dispute_id = self.request.query_params.get('dispute')
+        if dispute_id:
+            return DisputeMessage.objects.filter(
+                dispute_id=dispute_id,
+                dispute__order__buyer=self.request.user
+            ) | DisputeMessage.objects.filter(
+                dispute_id=dispute_id,
+                dispute__order__seller=self.request.user
+            ) | DisputeMessage.objects.filter(
+                dispute_id=dispute_id,
+                dispute__created_by=self.request.user
+            )
+        return DisputeMessage.objects.none()
+
+    def perform_create(self, serializer):
+        dispute = serializer.validated_data['dispute']
+        # Check if user is part of the dispute
+        if (dispute.order.buyer != self.request.user and 
+            dispute.order.seller != self.request.user and 
+            not self.request.user.is_staff):
+            raise permissions.PermissionDenied("You are not part of this dispute")
+        serializer.save(sender=self.request.user)

@@ -1,4 +1,6 @@
 from django.db import models
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.models import AbstractUser
 from taggit.managers import TaggableManager
 import uuid
@@ -167,6 +169,7 @@ class Notification(models.Model):
         ('like', 'Like'),
         ('comment', 'Comment'),
         ('mention', 'Mention'),
+        ('saved_search', 'Saved Search Match'),
     ]
     recipient = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='notifications')
     sender = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='sent_notifications')
@@ -302,6 +305,7 @@ class Category(models.Model):
     slug = models.SlugField(unique=True)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
     image = models.ImageField(upload_to='categories/', blank=True, null=True)
+    requires_approval = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -311,16 +315,66 @@ class Category(models.Model):
         return self.name
 
 class Listing(models.Model):
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('pending_review', 'Pending Review'),
+        ('active', 'Active'),
+        ('sold', 'Sold'),
+        ('expired', 'Expired'),
+        ('rejected', 'Rejected'),
+    ]
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='listings')
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='listings')
     title = models.CharField(max_length=255)
     description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    rejected_reason = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    expires_at = models.DateTimeField(blank=True, null=True)
+    shipping_available = models.BooleanField(default=False)
+    local_pickup = models.BooleanField(default=True)
+    shipping_cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    delivery_radius = models.PositiveIntegerField(null=True, blank=True, help_text="Delivery radius in km")
+
+    def save(self, *args, **kwargs):
+        if not self.id: # On creation
+            # Set expiration to 30 days
+            self.expires_at = timezone.now() + timezone.timedelta(days=30)
+            
+            # Handle status based on category requirement
+            if self.status == 'draft':
+                pass # Keep as draft if user requested
+            elif self.category and self.category.requires_approval:
+                self.status = 'pending_review'
+            else:
+                self.status = 'active'
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.title
+
+class ListingPromotion(models.Model):
+    PROMOTION_TYPES = [
+        ('featured', 'Featured'),
+        ('urgent', 'Urgent'),
+    ]
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name='promotions')
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    start_date = models.DateTimeField()
+    end_date = models.DateTimeField()
+    promotion_type = models.CharField(max_length=20, choices=PROMOTION_TYPES)
+    is_active = models.BooleanField(default=True)
+    transaction_id = models.CharField(max_length=100, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_currently_active(self):
+        now = timezone.now()
+        return self.is_active and self.start_date <= now <= self.end_date
+
+    def __str__(self):
+        return f"{self.promotion_type} boost for {self.listing.title}"
 
 class AttributeDefinition(models.Model):
     TYPE_CHOICES = [
@@ -352,3 +406,142 @@ class ListingAttributeValue(models.Model):
 
     def __str__(self):
         return f"{self.listing.title} - {self.attribute.name}: {self.value}"
+
+class SavedSearch(models.Model):
+    FREQUENCY_CHOICES = [
+        ('daily', 'Daily'),
+        ('weekly', 'Weekly'),
+        ('instant', 'Instant'),
+    ]
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='saved_searches')
+    query = models.CharField(max_length=255, blank=True, null=True)
+    filters = models.JSONField(default=dict, blank=True)
+    frequency = models.CharField(max_length=20, choices=FREQUENCY_CHOICES, default='daily')
+    last_checked_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Search for {self.user.username}: {self.query or 'All'}"
+
+class Conversation(models.Model):
+    participants = models.ManyToManyField(CustomUser, related_name='conversations')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Conversation {self.id} with {self.participants.count()} participants"
+
+class Message(models.Model):
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='sent_messages')
+    text = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Message from {self.sender.username} in Conv {self.conversation.id}"
+
+class Offer(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+        ('countered', 'Countered'),
+    ]
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name='offers')
+    buyer = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='sent_offers')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    countered_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Offer of {self.amount} for {self.listing.title} by {self.buyer.username}"
+
+class Report(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('investigating', 'Investigating'),
+        ('resolved', 'Resolved'),
+        ('dismissed', 'Dismissed'),
+    ]
+    REASON_CHOICES = [
+        ('spam', 'Spam'),
+        ('harassment', 'Harassment'),
+        ('inappropriate', 'Inappropriate Content'),
+        ('hate_speech', 'Hate Speech'),
+        ('scam', 'Scam/Fraud'),
+        ('other', 'Other'),
+    ]
+    reporter = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='reports_filed')
+    
+    # Generic Foreign Key to report anything (Post, Comment, User, Listing, etc.)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+    
+    reason = models.CharField(max_length=50, choices=REASON_CHOICES)
+    description = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Report by {self.reporter.username} - {self.reason} ({self.status})"
+
+class Order(models.Model):
+    DELIVERY_CHOICES = [
+        ('shipping', 'Shipping'),
+        ('pickup', 'Local Pickup'),
+    ]
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('paid', 'Paid'),
+        ('shipped', 'Shipped'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    listing = models.ForeignKey(Listing, on_delete=models.SET_NULL, null=True, related_name='orders')
+    buyer = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='orders_bought')
+    seller = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='orders_sold')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    delivery_option = models.CharField(max_length=20, choices=DELIVERY_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Order {self.id} for {self.listing.title if self.listing else 'Deleted Listing'}"
+
+class Dispute(models.Model):
+    STATUS_CHOICES = [
+        ('opened', 'Opened'),
+        ('under_review', 'Under Review'),
+        ('resolved', 'Resolved'),
+        ('closed', 'Closed'),
+    ]
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='disputes')
+    created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='disputes_created')
+    reason = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='opened')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Dispute for Order {self.order.id} by {self.created_by.username}"
+
+class DisputeMessage(models.Model):
+    dispute = models.ForeignKey(Dispute, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Message from {self.sender.username} on Dispute {self.dispute.id}"

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, Profile, Post, PostMedia, SMSDevice, Like, Comment, Hashtag, Follow, Notification, Block, Mute, FeedPost, Story, StoryView, StoryReaction, Highlight, HighlightItem, Category, Listing, AttributeDefinition, AttributeOption, ListingAttributeValue
+from .models import CustomUser, Profile, Post, PostMedia, SMSDevice, Like, Comment, Hashtag, Follow, Notification, Block, Mute, FeedPost, Story, StoryView, StoryReaction, Highlight, HighlightItem, Category, Listing, AttributeDefinition, AttributeOption, ListingAttributeValue, ListingPromotion, SavedSearch, Conversation, Message, Offer, Report, Order, Dispute, DisputeMessage
 
 class ProfileInline(admin.StackedInline):
     model = Profile
@@ -120,10 +120,86 @@ class ListingAttributeValueInline(admin.TabularInline):
     model = ListingAttributeValue
     extra = 1
 
+class ListingPromotionInline(admin.TabularInline):
+    model = ListingPromotion
+    extra = 0
+
+class OfferInline(admin.TabularInline):
+    model = Offer
+    extra = 0
+    readonly_fields = ['buyer', 'amount', 'created_at']
+
+class OrderInline(admin.TabularInline):
+    model = Order
+    extra = 0
+    readonly_fields = ['buyer', 'amount', 'delivery_option', 'created_at']
+
 class ListingAdmin(admin.ModelAdmin):
-    inlines = [ListingAttributeValueInline]
-    list_display = ['title', 'user', 'category', 'price', 'created_at']
-    list_filter = ['category', 'created_at']
+    inlines = [ListingAttributeValueInline, ListingPromotionInline, OfferInline, OrderInline]
+    list_display = ['title', 'user', 'category', 'status', 'price', 'created_at']
+    list_filter = ['category', 'status', 'shipping_available', 'local_pickup', 'created_at']
     search_fields = ['title', 'description', 'user__username']
 
 admin.site.register(Listing, ListingAdmin)
+
+class ListingPromotionAdmin(admin.ModelAdmin):
+    list_display = ['listing', 'user', 'promotion_type', 'start_date', 'end_date', 'is_active']
+    list_filter = ['promotion_type', 'is_active', 'start_date']
+    search_fields = ['listing__title', 'user__username', 'transaction_id']
+
+admin.site.register(ListingPromotion, ListingPromotionAdmin)
+
+class SavedSearchAdmin(admin.ModelAdmin):
+    list_display = ['user', 'query', 'frequency', 'last_checked_at', 'created_at']
+    list_filter = ['frequency', 'created_at']
+    search_fields = ['user__username', 'query']
+
+admin.site.register(SavedSearch, SavedSearchAdmin)
+
+class MessageInline(admin.TabularInline):
+    model = Message
+    extra = 1
+
+class ConversationAdmin(admin.ModelAdmin):
+    inlines = [MessageInline]
+    list_display = ['id', 'created_at', 'updated_at']
+
+admin.site.register(Conversation, ConversationAdmin)
+admin.site.register(Message)
+
+class OfferAdmin(admin.ModelAdmin):
+    list_display = ['listing', 'buyer', 'amount', 'status', 'created_at']
+    list_filter = ['status', 'created_at']
+    search_fields = ['listing__title', 'buyer__username']
+
+admin.site.register(Offer, OfferAdmin)
+
+class ReportAdmin(admin.ModelAdmin):
+    list_display = ['reporter', 'reason', 'content_object', 'status', 'created_at']
+    list_filter = ['status', 'reason', 'created_at']
+    search_fields = ['reporter__username', 'description']
+    actions = ['mark_as_investigating', 'mark_as_resolved', 'mark_as_dismissed']
+
+    def mark_as_investigating(self, request, queryset):
+        queryset.update(status='investigating')
+    
+    def mark_as_resolved(self, request, queryset):
+        queryset.update(status='resolved')
+
+    def mark_as_dismissed(self, request, queryset):
+        queryset.update(status='dismissed')
+
+admin.site.register(Report, ReportAdmin)
+
+class DisputeInline(admin.TabularInline):
+    model = Dispute
+    extra = 0
+    readonly_fields = ['created_by', 'reason', 'status', 'created_at']
+
+class OrderAdmin(admin.ModelAdmin):
+    inlines = [DisputeInline]
+    list_display = ['id', 'listing', 'buyer', 'seller', 'amount', 'delivery_option', 'status', 'created_at']
+    list_filter = ['status', 'delivery_option', 'created_at']
+    search_fields = ['listing__title', 'buyer__username', 'seller__username']
+
+admin.site.register(Order, OrderAdmin)

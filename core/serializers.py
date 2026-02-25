@@ -121,7 +121,7 @@ class PostSerializer(TaggitSerializer, serializers.ModelSerializer):
     def get_comments_count(self, obj):
         return obj.comments.count()
 
-from .models import Follow, Notification, Block, Mute, SavedCollection, SavedItem, Story, StoryView, StoryReaction, Highlight, HighlightItem, Category, Listing, AttributeDefinition, AttributeOption, ListingAttributeValue
+from .models import Follow, Notification, Block, Mute, SavedCollection, SavedItem, Story, StoryView, StoryReaction, Highlight, HighlightItem, Category, Listing, AttributeDefinition, AttributeOption, ListingAttributeValue, ListingPromotion, SavedSearch, Conversation, Message, Offer, Report, Order, Dispute, DisputeMessage
 
 class FollowSerializer(serializers.ModelSerializer):
     follower = UserSerializer(read_only=True)
@@ -271,14 +271,31 @@ class ListingAttributeValueSerializer(serializers.ModelSerializer):
         model = ListingAttributeValue
         fields = ['id', 'attribute', 'attribute_name', 'attribute_type', 'value']
 
+class ListingPromotionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ListingPromotion
+        fields = ['id', 'listing', 'start_date', 'end_date', 'promotion_type', 'is_active', 'transaction_id', 'created_at']
+        read_only_fields = ['user', 'is_active']
+
 class ListingSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     attribute_values = ListingAttributeValueSerializer(many=True, required=False)
+    active_promotions = serializers.SerializerMethodField()
 
     class Meta:
         model = Listing
-        fields = ['id', 'user', 'category', 'title', 'description', 'price', 'attribute_values', 'created_at', 'updated_at']
-        read_only_fields = ['user']
+        fields = [
+            'id', 'user', 'category', 'title', 'description', 'price', 'status', 
+            'rejected_reason', 'expires_at', 'attribute_values', 'active_promotions', 
+            'shipping_available', 'local_pickup', 'shipping_cost', 'delivery_radius',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['user', 'rejected_reason', 'expires_at']
+
+    def get_active_promotions(self, obj):
+        now = timezone.now()
+        active = obj.promotions.filter(is_active=True, start_date__lte=now, end_date__gte=now)
+        return ListingPromotionSerializer(active, many=True).data
 
     def create(self, validated_data):
         attribute_values_data = validated_data.pop('attribute_values', [])
@@ -298,3 +315,78 @@ class ListingSerializer(serializers.ModelSerializer):
                 ListingAttributeValue.objects.create(listing=instance, **attr_data)
         
         return instance
+
+class SavedSearchSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SavedSearch
+        fields = ['id', 'user', 'query', 'filters', 'frequency', 'last_checked_at', 'created_at']
+        read_only_fields = ['user', 'last_checked_at']
+
+class MessageSerializer(serializers.ModelSerializer):
+    sender = UserSerializer(read_only=True)
+
+    class Meta:
+        model = Message
+        fields = ['id', 'conversation', 'sender', 'text', 'is_read', 'created_at']
+
+class ConversationSerializer(serializers.ModelSerializer):
+    participants = UserSerializer(many=True, read_only=True)
+    latest_message = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Conversation
+        fields = ['id', 'participants', 'latest_message', 'created_at', 'updated_at']
+
+    def get_latest_message(self, obj):
+        message = obj.messages.last()
+        if message:
+            return MessageSerializer(message).data
+        return None
+
+class OfferSerializer(serializers.ModelSerializer):
+    buyer_username = serializers.ReadOnlyField(source='buyer.username')
+    listing_title = serializers.ReadOnlyField(source='listing.title')
+
+    class Meta:
+        model = Offer
+        fields = ['id', 'listing', 'listing_title', 'buyer', 'buyer_username', 'amount', 'countered_amount', 'status', 'created_at', 'updated_at']
+        read_only_fields = ['buyer', 'status', 'created_at', 'updated_at']
+
+class ReportSerializer(serializers.ModelSerializer):
+    reporter_username = serializers.ReadOnlyField(source='reporter.username')
+
+    class Meta:
+        model = Report
+        fields = ['id', 'reporter', 'reporter_username', 'content_type', 'object_id', 'reason', 'description', 'status', 'created_at']
+        read_only_fields = ['reporter', 'status', 'created_at']
+
+class OrderSerializer(serializers.ModelSerializer):
+    buyer_username = serializers.ReadOnlyField(source='buyer.username')
+    seller_username = serializers.ReadOnlyField(source='seller.username')
+    listing_title = serializers.ReadOnlyField(source='listing.title')
+
+    class Meta:
+        model = Order
+        fields = [
+            'id', 'listing', 'listing_title', 'buyer', 'buyer_username', 
+            'seller', 'seller_username', 'amount', 'delivery_option', 
+            'status', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['buyer', 'seller', 'amount', 'created_at', 'updated_at']
+
+class DisputeMessageSerializer(serializers.ModelSerializer):
+    sender_username = serializers.ReadOnlyField(source='sender.username')
+
+    class Meta:
+        model = DisputeMessage
+        fields = ['id', 'dispute', 'sender', 'sender_username', 'text', 'created_at']
+        read_only_fields = ['sender', 'created_at']
+
+class DisputeSerializer(serializers.ModelSerializer):
+    creator_username = serializers.ReadOnlyField(source='created_by.username')
+    messages = DisputeMessageSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Dispute
+        fields = ['id', 'order', 'created_by', 'creator_username', 'reason', 'status', 'messages', 'created_at', 'updated_at']
+        read_only_fields = ['created_by', 'status', 'created_at', 'updated_at']

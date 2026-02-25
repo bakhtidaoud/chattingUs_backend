@@ -7,7 +7,9 @@ from .views import (
     EnableSMSView, VerifySMSView, Disable2FAView, StaticBackupCodesView,
     PostViewSet, CommentViewSet, HashtagViewSet, UserViewSet, FollowViewSet, NotificationViewSet,
     SavedCollectionViewSet, SavedItemViewSet, StoryViewSet, HighlightViewSet, CategoryViewSet,
-    ListingViewSet, AttributeDefinitionViewSet
+    ListingViewSet, AttributeDefinitionViewSet, ListingPromotionViewSet, SavedSearchViewSet,
+    ConversationViewSet, MessageViewSet, OfferViewSet, ReportViewSet, OrderViewSet,
+    DisputeViewSet, DisputeMessageViewSet
 )
 from rest_framework.routers import DefaultRouter
 
@@ -25,6 +27,15 @@ router.register(r'highlights', HighlightViewSet, basename='highlight')
 router.register(r'categories', CategoryViewSet, basename='category')
 router.register(r'listings', ListingViewSet, basename='listing')
 router.register(r'attributes', AttributeDefinitionViewSet, basename='attribute')
+router.register(r'promotions', ListingPromotionViewSet, basename='promotion')
+router.register(r'saved-searches', SavedSearchViewSet, basename='saved-search')
+router.register(r'conversations', ConversationViewSet, basename='conversation')
+router.register(r'messages', MessageViewSet, basename='message')
+router.register(r'offers', OfferViewSet, basename='offer')
+router.register(r'reports', ReportViewSet, basename='report')
+router.register(r'orders', OrderViewSet, basename='order')
+router.register(r'disputes', DisputeViewSet, basename='dispute')
+router.register(r'dispute-messages', DisputeMessageViewSet, basename='dispute-message')
 
 urlpatterns = [
     path('', include(router.urls)),
