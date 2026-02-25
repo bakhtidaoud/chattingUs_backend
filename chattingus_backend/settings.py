@@ -40,6 +40,10 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
+    "django_otp",
+    "django_otp.plugins.otp_totp",
+    "django_otp.plugins.otp_static",
+    "taggit",
     "core",
 ]
 
@@ -49,6 +53,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django_otp.middleware.OTPMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -166,3 +171,8 @@ SIMPLE_JWT = {
 }
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Twilio Settings (Placeholders)
+TWILIO_ACCOUNT_SID = 'your_account_sid'
+TWILIO_AUTH_TOKEN = 'your_auth_token'
+TWILIO_PHONE_NUMBER = 'your_twilio_phone_number'
