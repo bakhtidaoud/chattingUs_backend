@@ -9,7 +9,8 @@ from .views import (
     SavedCollectionViewSet, SavedItemViewSet, StoryViewSet, HighlightViewSet, CategoryViewSet,
     ListingViewSet, AttributeDefinitionViewSet, ListingPromotionViewSet, SavedSearchViewSet,
     ConversationViewSet, MessageViewSet, OfferViewSet, ReportViewSet, OrderViewSet,
-    DisputeViewSet, DisputeMessageViewSet
+    DisputeViewSet, DisputeMessageViewSet, ReviewViewSet,
+    WishlistItemViewSet, SellerFollowViewSet, DashboardViewSet
 )
 from rest_framework.routers import DefaultRouter
 
@@ -36,6 +37,10 @@ router.register(r'reports', ReportViewSet, basename='report')
 router.register(r'orders', OrderViewSet, basename='order')
 router.register(r'disputes', DisputeViewSet, basename='dispute')
 router.register(r'dispute-messages', DisputeMessageViewSet, basename='dispute-message')
+router.register(r'reviews', ReviewViewSet, basename='review')
+router.register(r'wishlist', WishlistItemViewSet, basename='wishlist')
+router.register(r'seller-follows', SellerFollowViewSet, basename='seller-follow')
+router.register(r'dashboard', DashboardViewSet, basename='dashboard')
 
 urlpatterns = [
     path('', include(router.urls)),

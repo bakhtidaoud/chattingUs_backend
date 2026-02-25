@@ -14,18 +14,22 @@ class UserSerializer(serializers.ModelSerializer):
     profile = ProfileSerializer(read_only=True)
     followers_count = serializers.SerializerMethodField()
     following_count = serializers.SerializerMethodField()
+    seller_ratings = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'bio', 'avatar', 'phone', 'location', 
                   'date_of_birth', 'gender', 'website', 'is_private', 'is_verified', 
-                  'profile', 'followers_count', 'following_count']
+                  'profile', 'followers_count', 'following_count', 'seller_ratings']
 
     def get_followers_count(self, obj):
         return obj.followers.filter(status='accepted').count()
 
     def get_following_count(self, obj):
         return obj.following.filter(status='accepted').count()
+
+    def get_seller_ratings(self, obj):
+        return obj.get_seller_ratings()
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -121,7 +125,7 @@ class PostSerializer(TaggitSerializer, serializers.ModelSerializer):
     def get_comments_count(self, obj):
         return obj.comments.count()
 
-from .models import Follow, Notification, Block, Mute, SavedCollection, SavedItem, Story, StoryView, StoryReaction, Highlight, HighlightItem, Category, Listing, AttributeDefinition, AttributeOption, ListingAttributeValue, ListingPromotion, SavedSearch, Conversation, Message, Offer, Report, Order, Dispute, DisputeMessage
+from .models import Follow, Notification, Block, Mute, SavedCollection, SavedItem, Story, StoryView, StoryReaction, Highlight, HighlightItem, Category, Listing, AttributeDefinition, AttributeOption, ListingAttributeValue, ListingPromotion, SavedSearch, Conversation, Message, Offer, Report, Order, Dispute, DisputeMessage, Review, WishlistItem, SellerFollow
 
 class FollowSerializer(serializers.ModelSerializer):
     follower = UserSerializer(read_only=True)
@@ -390,3 +394,33 @@ class DisputeSerializer(serializers.ModelSerializer):
         model = Dispute
         fields = ['id', 'order', 'created_by', 'creator_username', 'reason', 'status', 'messages', 'created_at', 'updated_at']
         read_only_fields = ['created_by', 'status', 'created_at', 'updated_at']
+
+class ReviewSerializer(serializers.ModelSerializer):
+    reviewer_username = serializers.ReadOnlyField(source='reviewer.username')
+    reviewee_username = serializers.ReadOnlyField(source='reviewee.username')
+
+    class Meta:
+        model = Review
+        fields = [
+            'id', 'order', 'reviewer', 'reviewer_username', 
+            'reviewee', 'reviewee_username', 'rating', 
+            'item_as_described', 'communication', 'shipping_speed', 
+            'comment', 'created_at'
+        ]
+        read_only_fields = ['reviewer', 'reviewee', 'created_at']
+
+class WishlistItemSerializer(serializers.ModelSerializer):
+    listing_title = serializers.ReadOnlyField(source='listing.title')
+    
+    class Meta:
+        model = WishlistItem
+        fields = ['id', 'user', 'listing', 'listing_title', 'created_at']
+        read_only_fields = ['user']
+
+class SellerFollowSerializer(serializers.ModelSerializer):
+    seller_username = serializers.ReadOnlyField(source='seller.username')
+
+    class Meta:
+        model = SellerFollow
+        fields = ['id', 'user', 'seller', 'seller_username', 'created_at']
+        read_only_fields = ['user']

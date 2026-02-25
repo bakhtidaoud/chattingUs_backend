@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, Profile, Post, PostMedia, SMSDevice, Like, Comment, Hashtag, Follow, Notification, Block, Mute, FeedPost, Story, StoryView, StoryReaction, Highlight, HighlightItem, Category, Listing, AttributeDefinition, AttributeOption, ListingAttributeValue, ListingPromotion, SavedSearch, Conversation, Message, Offer, Report, Order, Dispute, DisputeMessage
+from .models import CustomUser, Profile, Post, PostMedia, SMSDevice, Like, Comment, Hashtag, Follow, Notification, Block, Mute, FeedPost, Story, StoryView, StoryReaction, Highlight, HighlightItem, Category, Listing, AttributeDefinition, AttributeOption, ListingAttributeValue, ListingPromotion, SavedSearch, Conversation, Message, Offer, Report, Order, Dispute, DisputeMessage, Review, WishlistItem, SellerFollow
 
 class ProfileInline(admin.StackedInline):
     model = Profile
@@ -196,10 +196,59 @@ class DisputeInline(admin.TabularInline):
     extra = 0
     readonly_fields = ['created_by', 'reason', 'status', 'created_at']
 
+class ReviewInline(admin.StackedInline):
+    model = Review
+    extra = 0
+    readonly_fields = ['reviewer', 'reviewee', 'rating', 'item_as_described', 'communication', 'shipping_speed', 'created_at']
+
 class OrderAdmin(admin.ModelAdmin):
-    inlines = [DisputeInline]
+    inlines = [DisputeInline, ReviewInline]
     list_display = ['id', 'listing', 'buyer', 'seller', 'amount', 'delivery_option', 'status', 'created_at']
     list_filter = ['status', 'delivery_option', 'created_at']
     search_fields = ['listing__title', 'buyer__username', 'seller__username']
 
 admin.site.register(Order, OrderAdmin)
+
+class DisputeMessageInline(admin.TabularInline):
+    model = DisputeMessage
+    extra = 1
+
+class DisputeAdmin(admin.ModelAdmin):
+    inlines = [DisputeMessageInline]
+    list_display = ['id', 'order', 'created_by', 'status', 'created_at']
+    list_filter = ['status', 'created_at']
+    search_fields = ['order__listing__title', 'created_by__username', 'reason']
+    actions = ['mark_as_under_review', 'mark_as_resolved', 'mark_as_closed']
+
+    def mark_as_under_review(self, request, queryset):
+        queryset.update(status='under_review')
+
+    def mark_as_resolved(self, request, queryset):
+        queryset.update(status='resolved')
+
+    def mark_as_closed(self, request, queryset):
+        queryset.update(status='closed')
+
+admin.site.register(Dispute, DisputeAdmin)
+admin.site.register(DisputeMessage)
+
+class ReviewAdmin(admin.ModelAdmin):
+    list_display = ['order', 'reviewer', 'reviewee', 'rating', 'created_at']
+    list_filter = ['rating', 'created_at']
+    search_fields = ['reviewer__username', 'reviewee__username', 'comment']
+
+admin.site.register(Review, ReviewAdmin)
+
+class WishlistItemAdmin(admin.ModelAdmin):
+    list_display = ['user', 'listing', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['user__username', 'listing__title']
+
+admin.site.register(WishlistItem, WishlistItemAdmin)
+
+class SellerFollowAdmin(admin.ModelAdmin):
+    list_display = ['user', 'seller', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['user__username', 'seller__username']
+
+admin.site.register(SellerFollow, SellerFollowAdmin)

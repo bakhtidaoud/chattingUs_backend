@@ -30,6 +30,15 @@ class CustomUser(AbstractUser):
     def __str__(self):
         return self.username
 
+    def get_seller_ratings(self):
+        from django.db.models import Avg
+        return self.reviews_received.aggregate(
+            avg_rating=Avg('rating'),
+            avg_item=Avg('item_as_described'),
+            avg_communication=Avg('communication'),
+            avg_shipping=Avg('shipping_speed')
+        )
+
 class Profile(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='profile')
     cover_photo = models.ImageField(upload_to='covers/', blank=True, null=True)
@@ -170,12 +179,14 @@ class Notification(models.Model):
         ('comment', 'Comment'),
         ('mention', 'Mention'),
         ('saved_search', 'Saved Search Match'),
+        ('new_listing', 'New Listing from Seller'),
     ]
     recipient = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='notifications')
     sender = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='sent_notifications')
     notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
     post = models.ForeignKey('Post', on_delete=models.CASCADE, null=True, blank=True)
     comment = models.ForeignKey('Comment', on_delete=models.CASCADE, null=True, blank=True)
+    listing = models.ForeignKey('Listing', on_delete=models.CASCADE, null=True, blank=True)
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -337,6 +348,7 @@ class Listing(models.Model):
     local_pickup = models.BooleanField(default=True)
     shipping_cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     delivery_radius = models.PositiveIntegerField(null=True, blank=True, help_text="Delivery radius in km")
+    contact_clicks = models.PositiveIntegerField(default=0)
 
     def save(self, *args, **kwargs):
         if not self.id: # On creation
@@ -350,7 +362,20 @@ class Listing(models.Model):
                 self.status = 'pending_review'
             else:
                 self.status = 'active'
+        is_new = not self.id
         super().save(*args, **kwargs)
+        if is_new and self.status == 'active':
+            self.notify_followers()
+
+    def notify_followers(self):
+        followers = SellerFollow.objects.filter(seller=self.user)
+        for follow in followers:
+            Notification.objects.create(
+                recipient=follow.user,
+                sender=self.user,
+                notification_type='new_listing',
+                listing=self
+            )
 
     def __str__(self):
         return self.title
@@ -545,3 +570,47 @@ class DisputeMessage(models.Model):
 
     def __str__(self):
         return f"Message from {self.sender.username} on Dispute {self.dispute.id}"
+
+class Review(models.Model):
+    order = models.OneToOneField('Order', on_delete=models.CASCADE, related_name='review')
+    reviewer = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='reviews_given')
+    reviewee = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='reviews_received')
+    rating = models.PositiveSmallIntegerField(choices=[(i, i) for i in range(1, 6)])
+    item_as_described = models.PositiveSmallIntegerField(choices=[(i, i) for i in range(1, 6)])
+    communication = models.PositiveSmallIntegerField(choices=[(i, i) for i in range(1, 6)])
+    shipping_speed = models.PositiveSmallIntegerField(choices=[(i, i) for i in range(1, 6)])
+    comment = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Review for Order {self.order.id} by {self.reviewer.username}"
+
+class WishlistItem(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='wishlist_items')
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name='wishlisted_by')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'listing')
+
+    def __str__(self):
+        return f"{self.user.username} - {self.listing.title}"
+
+class SellerFollow(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='seller_following')
+    seller = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='seller_followers')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'seller')
+
+    def __str__(self):
+        return f"{self.user.username} follows seller {self.seller.username}"
+
+class ListingView(models.Model):
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name='views')
+    user = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='listings_viewed')
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"View for {self.listing.title} at {self.viewed_at}"

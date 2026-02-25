@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 import random
 from django.utils import timezone
-from .models import CustomUser, UserEmailVerification, SMSDevice, Post, PostMedia, Like, Comment, Hashtag, Follow, Notification, Block, Mute, FeedPost, SavedCollection, SavedItem, Story, StoryView, StoryReaction, Highlight, HighlightItem, Category, Listing, AttributeDefinition, ListingAttributeValue, ListingPromotion, SavedSearch, Conversation, Message, Offer, Report, Order, Dispute, DisputeMessage
+from .models import CustomUser, UserEmailVerification, SMSDevice, Post, PostMedia, Like, Comment, Hashtag, Follow, Notification, Block, Mute, FeedPost, SavedCollection, SavedItem, Story, StoryView, StoryReaction, Highlight, HighlightItem, Category, Listing, AttributeDefinition, ListingAttributeValue, ListingPromotion, SavedSearch, Conversation, Message, Offer, Report, Order, Dispute, DisputeMessage, Review, WishlistItem, SellerFollow, ListingView
 from .utils import send_verification_email, send_sms
 from django_otp.plugins.otp_static.models import StaticDevice, StaticToken
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -20,7 +20,8 @@ from .serializers import (
     HighlightSerializer, CategorySerializer,
     AttributeDefinitionSerializer, ListingSerializer, ListingPromotionSerializer,
     SavedSearchSerializer, ConversationSerializer, MessageSerializer, OfferSerializer,
-    ReportSerializer, OrderSerializer, DisputeSerializer, DisputeMessageSerializer
+    ReportSerializer, OrderSerializer, DisputeSerializer, DisputeMessageSerializer,
+    ReviewSerializer, WishlistItemSerializer, SellerFollowSerializer
 )
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -768,6 +769,13 @@ class ListingViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # Track view
+        user = request.user if request.user.is_authenticated else None
+        ListingView.objects.create(listing=instance, user=user)
+        return super().retrieve(request, *args, **kwargs)
+
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def renew(self, request, pk=None):
         listing = self.get_object()
@@ -791,6 +799,12 @@ class ListingViewSet(viewsets.ModelViewSet):
         if seller == buyer:
             return Response({'error': 'You cannot contact yourself'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Check if either user has blocked the other
+        if Block.objects.filter(user=buyer, blocked_user=seller).exists():
+            return Response({'error': 'You have blocked this seller.'}, status=status.HTTP_403_FORBIDDEN)
+        if Block.objects.filter(user=seller, blocked_user=buyer).exists():
+            return Response({'error': 'This seller has blocked you.'}, status=status.HTTP_403_FORBIDDEN)
+
         # Find or create conversation
         conversation = Conversation.objects.filter(participants=buyer).filter(participants=seller).first()
         if not conversation:
@@ -805,6 +819,10 @@ class ListingViewSet(viewsets.ModelViewSet):
             sender=buyer,
             text=message_text
         )
+
+        # Track contact click
+        listing.contact_clicks += 1
+        listing.save()
 
         return Response({
             'status': 'conversation started',
@@ -858,7 +876,23 @@ class MessageViewSet(viewsets.ModelViewSet):
         return Message.objects.none()
 
     def perform_create(self, serializer):
-        serializer.save(sender=self.request.user)
+        conversation = serializer.validated_data['conversation']
+        sender = self.request.user
+        
+        if not conversation.participants.filter(id=sender.id).exists():
+            raise permissions.PermissionDenied("You are not a participant in this conversation.")
+            
+        participants = conversation.participants.all()
+        
+        # Check if any other participant has blocked the sender or vice versa
+        for participant in participants:
+            if participant != sender:
+                if Block.objects.filter(user=sender, blocked_user=participant).exists():
+                    raise permissions.PermissionDenied("You have blocked a participant in this conversation.")
+                if Block.objects.filter(user=participant, blocked_user=sender).exists():
+                    raise permissions.PermissionDenied("A participant in this conversation has blocked you.")
+        
+        serializer.save(sender=sender)
 
 class OfferViewSet(viewsets.ModelViewSet):
     serializer_class = OfferSerializer
@@ -1017,3 +1051,81 @@ class DisputeMessageViewSet(viewsets.ModelViewSet):
             not self.request.user.is_staff):
             raise permissions.PermissionDenied("You are not part of this dispute")
         serializer.save(sender=self.request.user)
+
+class ReviewViewSet(viewsets.ModelViewSet):
+    serializer_class = ReviewSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Users see reviews they wrote or received
+        return Review.objects.filter(
+            models.Q(reviewer=self.request.user) | 
+            models.Q(reviewee=self.request.user)
+        )
+
+    def perform_create(self, serializer):
+        order = serializer.validated_data['order']
+        
+        # Only buyer can review
+        if order.buyer != self.request.user:
+            raise permissions.PermissionDenied("Only the buyer can review the order")
+            
+        # Check if already reviewed (unique constraint handled by OneToOneField, but nice to catch)
+        if hasattr(order, 'review'):
+            raise serializers.ValidationError("This order has already been reviewed")
+            
+        serializer.save(
+            reviewer=self.request.user,
+            reviewee=order.seller
+        )
+
+class WishlistItemViewSet(viewsets.ModelViewSet):
+    serializer_class = WishlistItemSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return WishlistItem.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class SellerFollowViewSet(viewsets.ModelViewSet):
+    serializer_class = SellerFollowSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class DashboardViewSet(viewsets.ViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @action(detail=False, methods=['get'])
+    def seller_stats(self, request):
+        user = request.user
+        listings = Listing.objects.filter(user=user)
+        
+        total_views = ListingView.objects.filter(listing__user=user).count()
+        total_clicks = sum(l.contact_clicks for l in listings)
+        
+        orders = Order.objects.filter(seller=user)
+        total_sales = orders.count()
+        
+        conversion_rate = (total_sales / total_views * 100) if total_views > 0 else 0
+        
+        # Monthly Revenue Chart
+        from django.db.models.functions import TruncMonth
+        from django.db.models import Sum
+        
+        revenue_data = Order.objects.filter(seller=user, status='completed') \
+            .annotate(month=TruncMonth('created_at')) \
+            .values('month') \
+            .annotate(revenue=Sum('amount')) \
+            .order_by('month')
+
+        return Response({
+            'total_views': total_views,
+            'contact_clicks': total_clicks,
+            'total_sales': total_sales,
+            'conversion_rate': round(conversion_rate, 2),
+            'revenue_chart': revenue_data
+        })
