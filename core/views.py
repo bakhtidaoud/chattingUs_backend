@@ -2,13 +2,19 @@ from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 import random
+import uuid
+from decimal import Decimal
 from django.utils import timezone
 from .models import CustomUser, UserEmailVerification, SMSDevice, Post, PostMedia, Like, Comment, Hashtag, Follow, Notification, Block, Mute, FeedPost, SavedCollection, SavedItem, Story, StoryView, StoryReaction, Highlight, HighlightItem, Category, Listing, AttributeDefinition, ListingAttributeValue, ListingPromotion, SavedSearch, Conversation, Message, Offer, Report, Order, Dispute, DisputeMessage, Review, WishlistItem, SellerFollow, ListingView
-from .utils import send_verification_email, send_sms
+from .utils import send_verification_email, send_sms, send_notification
 from django_otp.plugins.otp_static.models import StaticDevice, StaticToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.core.cache import cache
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from django.contrib.auth import get_user_model
+from .throttles import AuthRateThrottle, PostRateThrottle, MarketplaceRateThrottle, VerifiedUserRateThrottle
 from .serializers import (
     RegisterSerializer, UserSerializer, CustomTokenObtainPairSerializer, 
     CustomTokenObtainSlidingSerializer, PasswordChangeSerializer,
@@ -21,7 +27,13 @@ from .serializers import (
     AttributeDefinitionSerializer, ListingSerializer, ListingPromotionSerializer,
     SavedSearchSerializer, ConversationSerializer, MessageSerializer, OfferSerializer,
     ReportSerializer, OrderSerializer, DisputeSerializer, DisputeMessageSerializer,
-    ReviewSerializer, WishlistItemSerializer, SellerFollowSerializer
+    ReviewSerializer, WishlistItemSerializer, SellerFollowSerializer,
+    NotificationSettingSerializer, SubscriptionPlanSerializer, UserSubscriptionSerializer,
+    WalletSerializer, VirtualTransactionSerializer, ReferralSerializer, PayoutSerializer
+)
+from .models import (
+    CustomUser, Profile, Follow, Notification, NotificationSetting, SubscriptionPlan, 
+    UserSubscription, Wallet, VirtualTransaction, Referral, Payout, Order, Review
 )
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -243,6 +255,14 @@ class StaticBackupCodesView(APIView):
 class PostViewSet(viewsets.ModelViewSet):
     serializer_class = PostSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    throttle_classes = [PostRateThrottle, VerifiedUserRateThrottle]
+
+    @method_decorator(cache_page(60 * 15)) # Cache for 15 mins
+    def list(self, request, *args, **kwargs):
+        # Only cache for anonymous users to avoid mixing personalized feeds
+        if not request.user.is_authenticated:
+            return super().list(request, *args, **kwargs)
+        return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
         user = self.request.user
@@ -300,6 +320,15 @@ class PostViewSet(viewsets.ModelViewSet):
                 like.reaction_type = reaction_type
                 like.save()
                 return Response({'status': 'reaction updated'}, status=status.HTTP_200_OK)
+        
+        # Notify post owner
+        if post.user != request.user:
+            send_notification(
+                recipient=post.user,
+                sender=request.user,
+                notification_type='like',
+                post=post
+            )
                 
         return Response({'status': 'reaction added'}, status=status.HTTP_201_CREATED)
 
@@ -390,11 +419,51 @@ class CommentViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        comment = serializer.save(user=self.request.user)
+        if comment.post.user != self.request.user:
+            send_notification(
+                recipient=comment.post.user,
+                sender=self.request.user,
+                notification_type='comment',
+                post=comment.post,
+                comment=comment
+            )
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    throttle_classes = [AuthRateThrottle, VerifiedUserRateThrottle]
+
+    def retrieve(self, request, *args, **kwargs):
+        user_id = kwargs.get('pk')
+        cache_key = f'user_profile_{user_id}'
+        cached_data = cache.get(cache_key)
+        
+        if cached_data:
+            return Response(cached_data)
+        
+        response = super().retrieve(request, *args, **kwargs)
+        cache.set(cache_key, response.data, timeout=3600) # 1 hour
+        return response
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def onboard_stripe(self, request):
+        user = request.user
+        # Generate mock Stripe Connect link
+        account_id = f"acct_{random.getrandbits(32)}"
+        user.profile.stripe_account_id = account_id
+        user.profile.save()
+        return Response({
+            'stripe_url': f"https://connect.stripe.com/express/oauth/authorize?client_id=ca_123&state={account_id}",
+            'account_id': account_id
+        })
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def stripe_callback(self, request):
+        user = request.user
+        user.profile.is_onboarded = True
+        user.profile.save()
+        return Response({'status': 'seller onboarded'})
 
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def follow(self, request, pk=None):
@@ -414,14 +483,14 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({'status': 'unfollowed'}, status=status.HTTP_200_OK)
         
         if status_follow == 'pending':
-            Notification.objects.create(
+            send_notification(
                 recipient=target_user,
                 sender=request.user,
                 notification_type='follow_request'
             )
             return Response({'status': 'requested'}, status=status.HTTP_201_CREATED)
         else:
-            Notification.objects.create(
+            send_notification(
                 recipient=target_user,
                 sender=request.user,
                 notification_type='follow_accept'
@@ -571,10 +640,32 @@ class NotificationViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Notification.objects.filter(recipient=self.request.user)
 
+    @action(detail=True, methods=['post'])
+    def mark_as_read(self, request, pk=None):
+        notification = self.get_object()
+        notification.is_read = True
+        notification.save()
+        return Response({'status': 'marked as read'})
+
     @action(detail=False, methods=['post'])
     def mark_all_as_read(self, request):
         self.get_queryset().update(is_read=True)
         return Response({'status': 'all marked as read'})
+
+    @action(detail=False, methods=['post'])
+    def clear_all(self, request):
+        self.get_queryset().delete()
+        return Response({'status': 'all notifications cleared'})
+
+class NotificationSettingViewSet(viewsets.ModelViewSet):
+    serializer_class = NotificationSettingSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return NotificationSetting.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 class SavedCollectionViewSet(viewsets.ModelViewSet):
     serializer_class = SavedCollectionSerializer
@@ -689,6 +780,10 @@ class CategoryViewSet(viewsets.ModelViewSet):
     serializer_class = CategorySerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
+    @method_decorator(cache_page(60 * 60 * 24)) # Cache for 24 hours
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
     def get_queryset(self):
         # Allow filtering to get only top-level (root) categories
         roots_only = self.request.query_params.get('roots_only')
@@ -710,6 +805,7 @@ class AttributeDefinitionViewSet(viewsets.ReadOnlyModelViewSet):
 class ListingViewSet(viewsets.ModelViewSet):
     serializer_class = ListingSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    throttle_classes = [MarketplaceRateThrottle, VerifiedUserRateThrottle]
 
     def get_queryset(self):
         queryset = Listing.objects.all()
@@ -860,7 +956,48 @@ class ConversationViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return self.request.user.conversations.all()
+        return self.request.user.conversations.all().order_by('-updated_at')
+
+    def perform_create(self, serializer):
+        conversation = serializer.save()
+        conversation.participants.add(self.request.user)
+        # If it's a group, the creator is an admin
+        if conversation.type == 'group':
+            conversation.admins.add(self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def add_participants(self, request, pk=None):
+        conversation = self.get_object()
+        if conversation.type != 'group':
+            return Response({'error': 'Participants can only be added to group conversations.'}, status=400)
+        
+        if not conversation.admins.filter(id=request.user.id).exists():
+            return Response({'error': 'Only admins can add participants.'}, status=403)
+            
+        user_ids = request.data.get('user_ids', [])
+        users = CustomUser.objects.filter(id__in=user_ids)
+        conversation.participants.add(*users)
+        return Response({'status': 'participants added'})
+
+    @action(detail=True, methods=['post'])
+    def remove_participant(self, request, pk=None):
+        conversation = self.get_object()
+        if conversation.type != 'group':
+            return Response({'error': 'Participants can only be removed from group conversations.'}, status=400)
+        
+        if not conversation.admins.filter(id=request.user.id).exists():
+            return Response({'error': 'Only admins can remove participants.'}, status=403)
+            
+        user_id = request.data.get('user_id')
+        try:
+            user = CustomUser.objects.get(id=user_id)
+            if conversation.admins.filter(id=user.id).exists() and conversation.admins.count() == 1:
+                 return Response({'error': 'Cannot remove the last admin.'}, status=400)
+            conversation.participants.remove(user)
+            conversation.admins.remove(user)
+            return Response({'status': 'participant removed'})
+        except CustomUser.DoesNotExist:
+            return Response({'error': 'User not found.'}, status=404)
 
 class MessageViewSet(viewsets.ModelViewSet):
     serializer_class = MessageSerializer
@@ -869,10 +1006,15 @@ class MessageViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         conversation_id = self.request.query_params.get('conversation')
         if conversation_id:
-            return Message.objects.filter(
+            qs = Message.objects.filter(
                 conversation_id=conversation_id,
                 conversation__participants=self.request.user
             )
+            # Filter out soft-deleted messages for the current user
+            user = self.request.user
+            qs = qs.exclude(sender=user, deleted_for_sender=True)
+            qs = qs.exclude(~models.Q(sender=user), deleted_for_receiver=True)
+            return qs
         return Message.objects.none()
 
     def perform_create(self, serializer):
@@ -893,6 +1035,34 @@ class MessageViewSet(viewsets.ModelViewSet):
                     raise permissions.PermissionDenied("A participant in this conversation has blocked you.")
         
         serializer.save(sender=sender)
+
+    @action(detail=True, methods=['post'])
+    def delete_for_me(self, request, pk=None):
+        message = self.get_object()
+        if message.sender == request.user:
+            message.deleted_for_sender = True
+        else:
+            message.deleted_for_receiver = True
+        message.save()
+        return Response({'status': 'message hidden for user'})
+
+class MessageSearchView(generics.ListAPIView):
+    serializer_class = MessageSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        query = self.request.query_params.get('q')
+        if not query:
+            return Message.objects.none()
+        
+        user = self.request.user
+        qs = Message.objects.filter(conversation__participants=user)
+        
+        # Hide soft-deleted messages
+        qs = qs.exclude(sender=user, deleted_for_sender=True)
+        qs = qs.exclude(~models.Q(sender=user), deleted_for_receiver=True)
+
+        return qs.filter(text__icontains=query)
 
 class OfferViewSet(viewsets.ModelViewSet):
     serializer_class = OfferSerializer
@@ -991,11 +1161,30 @@ class OrderViewSet(viewsets.ModelViewSet):
         if delivery_option == 'shipping' and listing.shipping_cost:
             amount += listing.shipping_cost
             
+        # Platform fee (e.g. 5%)
+        platform_fee = amount * Decimal('0.05')
+        
         serializer.save(
             buyer=self.request.user,
             seller=listing.user,
-            amount=amount
+            amount=amount,
+            platform_fee=platform_fee
         )
+
+    @action(detail=True, methods=['post'])
+    def confirm_receipt(self, request, pk=None):
+        order = self.get_object()
+        if order.buyer != request.user:
+            return Response({'error': 'Only the buyer can confirm receipt.'}, status=403)
+        
+        if order.status != 'shipped':
+            return Response({'error': 'Order must be in shipped status.'}, status=400)
+            
+        order.status = 'completed'
+        order.confirmed_at = timezone.now()
+        order.payout_released = True
+        order.save()
+        return Response({'status': 'order completed, payment released to seller'})
 
 class DisputeViewSet(viewsets.ModelViewSet):
     serializer_class = DisputeSerializer
@@ -1129,3 +1318,65 @@ class DashboardViewSet(viewsets.ViewSet):
             'conversion_rate': round(conversion_rate, 2),
             'revenue_chart': revenue_data
         })
+
+class SubscriptionPlanViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = SubscriptionPlan.objects.filter(is_active=True)
+    serializer_class = SubscriptionPlanSerializer
+    permission_classes = [permissions.AllowAny]
+
+class UserSubscriptionViewSet(viewsets.ModelViewSet):
+    serializer_class = UserSubscriptionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return UserSubscription.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        # Mock stripe subscription creation
+        serializer.save(user=self.request.user, status='active')
+
+class WalletViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = WalletSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Wallet.objects.filter(user=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def buy_currency(self, request, pk=None):
+        wallet = self.get_object()
+        amount = request.data.get('amount')
+        if not amount or Decimal(str(amount)) <= 0:
+            return Response({'error': 'Invalid amount'}, status=400)
+        
+        # mock stripe payment
+        import uuid
+        VirtualTransaction.objects.create(
+            wallet=wallet,
+            amount=amount,
+            transaction_type='credit',
+            description='Buy currency via Stripe',
+            reference=f'ch_{uuid.uuid4().hex[:12]}'
+        )
+        wallet.balance += Decimal(str(amount))
+        wallet.save()
+        return Response({'status': 'currency purchased', 'balance': str(wallet.balance)})
+
+class PayoutViewSet(viewsets.ModelViewSet):
+    serializer_class = PayoutSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Payout.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        # In real app, check if user has enough balance/completed orders
+        serializer.save(user=self.request.user, status='requested')
+
+class ReferralViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = ReferralSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        from django.db.models import Q
+        return Referral.objects.filter(Q(referrer=self.request.user) | Q(referred_user=self.request.user))

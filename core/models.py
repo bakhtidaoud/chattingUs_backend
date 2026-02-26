@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.models import AbstractUser
+from django.contrib.postgres.search import SearchVectorField, SearchVector
+from django.contrib.postgres.indexes import GinIndex
 from taggit.managers import TaggableManager
 import uuid
 import os
@@ -46,6 +48,12 @@ class Profile(models.Model):
     interests = models.JSONField(default=list, blank=True)
     social_links = models.JSONField(default=dict, blank=True)
     last_active = models.DateTimeField(auto_now=True)
+    last_seen = models.DateTimeField(null=True, blank=True)
+    is_online = models.BooleanField(default=False, db_index=True)
+    stripe_account_id = models.CharField(max_length=100, blank=True, null=True)
+    is_onboarded = models.BooleanField(default=False)
+    referral_code = models.CharField(max_length=20, unique=True, blank=True, null=True)
+    referred_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='referrals_made')
 
     def __str__(self):
         return f"{self.user.username}'s Profile"
@@ -56,7 +64,7 @@ from django.utils import timezone
 class UserEmailVerification(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='email_verification')
     token = models.UUIDField(default=uuid.uuid4, unique=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     expires_at = models.DateTimeField()
 
     def save(self, *args, **kwargs):
@@ -88,10 +96,25 @@ class Post(models.Model):
     caption = models.TextField(blank=True, null=True)
     location = models.CharField(max_length=255, blank=True, null=True)
     mentions = models.ManyToManyField(CustomUser, blank=True, related_name='mentioned_in')
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
     tags = TaggableManager()
     hashtags = models.ManyToManyField('Hashtag', blank=True, related_name='posts')
+    search_vector = SearchVectorField(null=True, blank=True)
+
+    class Meta:
+        indexes = [GinIndex(fields=['search_vector'])]
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # In a real Postgres environment, this would be a trigger. 
+        # For now, we update it on save if the backend supports it.
+        try:
+            Post.objects.filter(pk=self.pk).update(
+                search_vector=SearchVector('caption', config='english')
+            )
+        except:
+            pass
 
     def __str__(self):
         return f"Post by {self.user.username} - {self.id}"
@@ -160,10 +183,10 @@ class Follow(models.Model):
         ('accepted', 'Accepted'),
         ('rejected', 'Rejected'),
     ]
-    follower = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='following')
-    followed = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='followers')
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='accepted')
-    created_at = models.DateTimeField(auto_now_add=True)
+    follower = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='following', db_index=True)
+    followed = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='followers', db_index=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='accepted', db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
         unique_together = ('follower', 'followed')
@@ -195,6 +218,19 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"Notification for {self.recipient.username} from {self.sender.username}"
+
+class NotificationSetting(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='notification_settings')
+    type = models.CharField(max_length=30) # matches Notification types or general groups
+    email_enabled = models.BooleanField(default=True)
+    push_enabled = models.BooleanField(default=True)
+    in_app_enabled = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ('user', 'type')
+
+    def __str__(self):
+        return f"Settings for {self.user.username} - {self.type}"
 
 class Block(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='blocking')
@@ -349,6 +385,10 @@ class Listing(models.Model):
     shipping_cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     delivery_radius = models.PositiveIntegerField(null=True, blank=True, help_text="Delivery radius in km")
     contact_clicks = models.PositiveIntegerField(default=0)
+    search_vector = SearchVectorField(null=True, blank=True)
+
+    class Meta:
+        indexes = [GinIndex(fields=['search_vector'])]
 
     def save(self, *args, **kwargs):
         if not self.id: # On creation
@@ -364,6 +404,15 @@ class Listing(models.Model):
                 self.status = 'active'
         is_new = not self.id
         super().save(*args, **kwargs)
+        
+        # Update search vector
+        try:
+            Listing.objects.filter(pk=self.pk).update(
+                search_vector=SearchVector('title', 'description', config='english')
+            )
+        except:
+            pass
+
         if is_new and self.status == 'active':
             self.notify_followers()
 
@@ -392,7 +441,7 @@ class ListingPromotion(models.Model):
     promotion_type = models.CharField(max_length=20, choices=PROMOTION_TYPES)
     is_active = models.BooleanField(default=True)
     transaction_id = models.CharField(max_length=100, blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     def is_currently_active(self):
         now = timezone.now()
@@ -443,17 +492,26 @@ class SavedSearch(models.Model):
     filters = models.JSONField(default=dict, blank=True)
     frequency = models.CharField(max_length=20, choices=FREQUENCY_CHOICES, default='daily')
     last_checked_at = models.DateTimeField(auto_now_add=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     def __str__(self):
         return f"Search for {self.user.username}: {self.query or 'All'}"
 
 class Conversation(models.Model):
+    CONVERSATION_TYPES = [
+        ('direct', 'Direct'),
+        ('group', 'Group'),
+    ]
     participants = models.ManyToManyField(CustomUser, related_name='conversations')
-    created_at = models.DateTimeField(auto_now_add=True)
+    admins = models.ManyToManyField(CustomUser, related_name='administered_conversations', blank=True)
+    name = models.CharField(max_length=255, blank=True, null=True) # group name
+    type = models.CharField(max_length=10, choices=CONVERSATION_TYPES, default='direct')
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
+        if self.type == 'group' and self.name:
+            return f"Group: {self.name} ({self.id})"
         return f"Conversation {self.id} with {self.participants.count()} participants"
 
 class Message(models.Model):
@@ -461,13 +519,29 @@ class Message(models.Model):
     sender = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='sent_messages')
     text = models.TextField()
     is_read = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
+    priority = models.CharField(max_length=10, choices=[('normal', 'Normal'), ('high', 'High')], default='normal')
+    attachment = models.FileField(upload_to='chat_attachments/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    deleted_for_sender = models.BooleanField(default=False)
+    deleted_for_receiver = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['created_at']
 
     def __str__(self):
         return f"Message from {self.sender.username} in Conv {self.conversation.id}"
+
+class MessageReaction(models.Model):
+    message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='reactions')
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='message_reactions')
+    emoji = models.CharField(max_length=20)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        unique_together = ('message', 'user', 'emoji')
+
+    def __str__(self):
+        return f"{self.user.username} reacted {self.emoji} to message {self.message.id}"
 
 class Offer(models.Model):
     STATUS_CHOICES = [
@@ -481,7 +555,7 @@ class Offer(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     countered_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
@@ -512,7 +586,7 @@ class Report(models.Model):
     reason = models.CharField(max_length=50, choices=REASON_CHOICES)
     description = models.TextField(blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
@@ -536,7 +610,10 @@ class Order(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     delivery_option = models.CharField(max_length=20, choices=DELIVERY_CHOICES)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    created_at = models.DateTimeField(auto_now_add=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    payout_released = models.BooleanField(default=False)
+    platform_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
@@ -553,7 +630,7 @@ class Dispute(models.Model):
     created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='disputes_created')
     reason = models.TextField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='opened')
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
@@ -563,7 +640,7 @@ class DisputeMessage(models.Model):
     dispute = models.ForeignKey(Dispute, on_delete=models.CASCADE, related_name='messages')
     sender = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     text = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
         ordering = ['created_at']
@@ -580,7 +657,7 @@ class Review(models.Model):
     communication = models.PositiveSmallIntegerField(choices=[(i, i) for i in range(1, 6)])
     shipping_speed = models.PositiveSmallIntegerField(choices=[(i, i) for i in range(1, 6)])
     comment = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     def __str__(self):
         return f"Review for Order {self.order.id} by {self.reviewer.username}"
@@ -588,7 +665,7 @@ class Review(models.Model):
 class WishlistItem(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='wishlist_items')
     listing = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name='wishlisted_by')
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
         unique_together = ('user', 'listing')
@@ -599,7 +676,7 @@ class WishlistItem(models.Model):
 class SellerFollow(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='seller_following')
     seller = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='seller_followers')
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
         unique_together = ('user', 'seller')
@@ -614,3 +691,102 @@ class ListingView(models.Model):
 
     def __str__(self):
         return f"View for {self.listing.title} at {self.viewed_at}"
+
+class SubscriptionPlan(models.Model):
+    name = models.CharField(max_length=255)
+    stripe_price_id = models.CharField(max_length=255)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    features = models.JSONField(default=dict)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.name
+
+class UserSubscription(models.Model):
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('canceled', 'Canceled'),
+        ('expired', 'Expired'),
+    ]
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='subscription')
+    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.SET_NULL, null=True)
+    stripe_subscription_id = models.CharField(max_length=255, blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    expires_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.plan.name if self.plan else 'No Plan'}"
+
+class Wallet(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='wallet')
+    balance = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+
+    def __str__(self):
+        return f"{self.user.username}'s Wallet: {self.balance}"
+
+class VirtualTransaction(models.Model):
+    TRANSACTION_TYPES = [
+        ('credit', 'Credit'),
+        ('debit', 'Debit'),
+    ]
+    wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='transactions')
+    amount = models.DecimalField(max_digits=20, decimal_places=2)
+    transaction_type = models.CharField(max_length=10, choices=TRANSACTION_TYPES)
+    description = models.CharField(max_length=255)
+    reference = models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    def __str__(self):
+        return f"{self.transaction_type} of {self.amount} for {self.wallet.user.username}"
+
+class Referral(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('rewarded', 'Rewarded'),
+    ]
+    referrer = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='referral_records')
+    referred_user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='referred_by_set')
+    reward_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    def __str__(self):
+        return f"{self.referrer.username} referred {self.referred_user.username}"
+
+class Payout(models.Model):
+    STATUS_CHOICES = [
+        ('requested', 'Requested'),
+        ('processed', 'Processed'),
+        ('failed', 'Failed'),
+    ]
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='payouts')
+    order = models.ForeignKey('Order', on_delete=models.SET_NULL, null=True, blank=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    stripe_payout_id = models.CharField(max_length=255, blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='requested')
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    def __str__(self):
+        return f"Payout of {self.amount} to {self.user.username} ({self.status})"
+
+class DailyAggregate(models.Model):
+    date = models.DateField(unique=True)
+    new_users = models.PositiveIntegerField(default=0)
+    new_posts = models.PositiveIntegerField(default=0)
+    new_listings = models.PositiveIntegerField(default=0)
+    new_orders = models.PositiveIntegerField(default=0)
+    revenue = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+
+    class Meta:
+        ordering = ['-date']
+
+    def __str__(self):
+        return f"Analytics for {self.date}"
+
+class FeatureFlag(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    is_enabled = models.BooleanField(default=False)
+    rollout_percentage = models.PositiveSmallIntegerField(default=100) # 0-100
+
+    def __str__(self):
+        return f"Flag: {self.name} ({'Enabled' if self.is_enabled else 'Disabled'}, {self.rollout_percentage}%)"

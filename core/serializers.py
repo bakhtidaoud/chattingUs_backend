@@ -8,7 +8,7 @@ User = get_user_model()
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
-        fields = ['cover_photo', 'occupation', 'interests', 'social_links', 'last_active']
+        fields = ['cover_photo', 'occupation', 'interests', 'social_links', 'last_active', 'last_seen', 'is_online']
 
 class UserSerializer(serializers.ModelSerializer):
     profile = ProfileSerializer(read_only=True)
@@ -33,17 +33,31 @@ class UserSerializer(serializers.ModelSerializer):
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
+    referral_code = serializers.CharField(write_only=True, required=False)
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password']
+        fields = ['username', 'email', 'password', 'referral_code']
 
     def create(self, validated_data):
+        referral_code = validated_data.pop('referral_code', None)
         user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data['email'],
             password=validated_data['password']
         )
+        if referral_code:
+            try:
+                referrer_profile = Profile.objects.get(referral_code=referral_code)
+                profile = user.profile
+                profile.referred_by = referrer_profile.user
+                profile.save()
+                Referral.objects.get_or_create(
+                    referrer=referrer_profile.user,
+                    referred_user=user
+                )
+            except Profile.DoesNotExist:
+                pass
         return user
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -125,7 +139,7 @@ class PostSerializer(TaggitSerializer, serializers.ModelSerializer):
     def get_comments_count(self, obj):
         return obj.comments.count()
 
-from .models import Follow, Notification, Block, Mute, SavedCollection, SavedItem, Story, StoryView, StoryReaction, Highlight, HighlightItem, Category, Listing, AttributeDefinition, AttributeOption, ListingAttributeValue, ListingPromotion, SavedSearch, Conversation, Message, Offer, Report, Order, Dispute, DisputeMessage, Review, WishlistItem, SellerFollow
+from .models import Follow, Notification, NotificationSetting, Block, Mute, SavedCollection, SavedItem, Story, StoryView, StoryReaction, Highlight, HighlightItem, Category, Listing, AttributeDefinition, AttributeOption, ListingAttributeValue, ListingPromotion, SavedSearch, Conversation, Message, Offer, Report, Order, Dispute, DisputeMessage, Review, WishlistItem, SellerFollow, SubscriptionPlan, UserSubscription, Wallet, VirtualTransaction, Referral, Payout
 
 class FollowSerializer(serializers.ModelSerializer):
     follower = UserSerializer(read_only=True)
@@ -142,6 +156,11 @@ class NotificationSerializer(serializers.ModelSerializer):
         model = Notification
         fields = ['id', 'recipient', 'sender', 'notification_type', 'post', 'comment', 'is_read', 'created_at']
         read_only_fields = ['recipient', 'sender']
+
+class NotificationSettingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NotificationSetting
+        fields = ['id', 'type', 'email_enabled', 'push_enabled', 'in_app_enabled']
 
 class BlockSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
@@ -326,20 +345,49 @@ class SavedSearchSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'query', 'filters', 'frequency', 'last_checked_at', 'created_at']
         read_only_fields = ['user', 'last_checked_at']
 
+from .models import MessageReaction
+
+class MessageReactionSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+
+    class Meta:
+        model = MessageReaction
+        fields = ['id', 'user', 'emoji', 'created_at']
+
 class MessageSerializer(serializers.ModelSerializer):
     sender = UserSerializer(read_only=True)
+    reactions = MessageReactionSerializer(many=True, read_only=True)
 
     class Meta:
         model = Message
-        fields = ['id', 'conversation', 'sender', 'text', 'is_read', 'created_at']
+        fields = ['id', 'conversation', 'sender', 'text', 'reactions', 'is_read', 'priority', 'attachment', 'created_at', 
+                  'deleted_for_sender', 'deleted_for_receiver']
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        request = self.context.get('request')
+        user = request.user if request and request.user.is_authenticated else None
+        
+        if user:
+            is_deleted = False
+            if instance.sender == user and instance.deleted_for_sender:
+                is_deleted = True
+            elif instance.sender != user and instance.deleted_for_receiver:
+                is_deleted = True
+            
+            if is_deleted:
+                ret['text'] = None
+                ret['is_deleted_for_me'] = True
+        return ret
 
 class ConversationSerializer(serializers.ModelSerializer):
     participants = UserSerializer(many=True, read_only=True)
+    admins = UserSerializer(many=True, read_only=True)
     latest_message = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
-        fields = ['id', 'participants', 'latest_message', 'created_at', 'updated_at']
+        fields = ['id', 'participants', 'admins', 'name', 'type', 'latest_message', 'created_at', 'updated_at']
 
     def get_latest_message(self, obj):
         message = obj.messages.last()
@@ -374,9 +422,10 @@ class OrderSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'listing', 'listing_title', 'buyer', 'buyer_username', 
             'seller', 'seller_username', 'amount', 'delivery_option', 
-            'status', 'created_at', 'updated_at'
+            'status', 'confirmed_at', 'payout_released', 'platform_fee',
+            'created_at', 'updated_at'
         ]
-        read_only_fields = ['buyer', 'seller', 'amount', 'created_at', 'updated_at']
+        read_only_fields = ['buyer', 'seller', 'amount', 'platform_fee', 'payout_released', 'confirmed_at', 'created_at', 'updated_at']
 
 class DisputeMessageSerializer(serializers.ModelSerializer):
     sender_username = serializers.ReadOnlyField(source='sender.username')
@@ -424,3 +473,40 @@ class SellerFollowSerializer(serializers.ModelSerializer):
         model = SellerFollow
         fields = ['id', 'user', 'seller', 'seller_username', 'created_at']
         read_only_fields = ['user']
+
+class SubscriptionPlanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubscriptionPlan
+        fields = '__all__'
+
+class UserSubscriptionSerializer(serializers.ModelSerializer):
+    plan_name = serializers.ReadOnlyField(source='plan.name')
+    class Meta:
+        model = UserSubscription
+        fields = ['id', 'user', 'plan', 'plan_name', 'status', 'expires_at']
+        read_only_fields = ['user', 'status', 'expires_at']
+
+class WalletSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Wallet
+        fields = ['id', 'user', 'balance']
+        read_only_fields = ['user', 'balance']
+
+class VirtualTransactionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VirtualTransaction
+        fields = '__all__'
+        read_only_fields = ['wallet', 'created_at']
+
+class ReferralSerializer(serializers.ModelSerializer):
+    referrer_username = serializers.ReadOnlyField(source='referrer.username')
+    referred_username = serializers.ReadOnlyField(source='referred_user.username')
+    class Meta:
+        model = Referral
+        fields = ['id', 'referrer', 'referrer_username', 'referred_user', 'referred_username', 'reward_amount', 'status', 'created_at']
+
+class PayoutSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Payout
+        fields = '__all__'
+        read_only_fields = ['user', 'status', 'stripe_payout_id', 'created_at']

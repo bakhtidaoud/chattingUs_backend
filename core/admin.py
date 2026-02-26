@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, Profile, Post, PostMedia, SMSDevice, Like, Comment, Hashtag, Follow, Notification, Block, Mute, FeedPost, Story, StoryView, StoryReaction, Highlight, HighlightItem, Category, Listing, AttributeDefinition, AttributeOption, ListingAttributeValue, ListingPromotion, SavedSearch, Conversation, Message, Offer, Report, Order, Dispute, DisputeMessage, Review, WishlistItem, SellerFollow
+from .models import CustomUser, Profile, Post, PostMedia, SMSDevice, Like, Comment, Hashtag, Follow, Notification, Block, Mute, FeedPost, Story, StoryView, StoryReaction, Highlight, HighlightItem, Category, Listing, AttributeDefinition, AttributeOption, ListingAttributeValue, ListingPromotion, SavedSearch, Conversation, Message, Offer, Report, Order, Dispute, DisputeMessage, Review, WishlistItem, SellerFollow, SubscriptionPlan, UserSubscription, Wallet, VirtualTransaction, Referral, Payout, DailyAggregate, FeatureFlag
+from django.contrib.admin.models import LogEntry
+import uuid
 
 class ProfileInline(admin.StackedInline):
     model = Profile
@@ -203,11 +205,59 @@ class ReviewInline(admin.StackedInline):
 
 class OrderAdmin(admin.ModelAdmin):
     inlines = [DisputeInline, ReviewInline]
-    list_display = ['id', 'listing', 'buyer', 'seller', 'amount', 'delivery_option', 'status', 'created_at']
-    list_filter = ['status', 'delivery_option', 'created_at']
+    list_display = ['id', 'listing', 'buyer', 'seller', 'amount', 'delivery_option', 'status', 'payout_released', 'created_at']
+    list_filter = ['status', 'delivery_option', 'payout_released', 'created_at']
     search_fields = ['listing__title', 'buyer__username', 'seller__username']
+    actions = ['trigger_manual_payout']
+
+    def trigger_manual_payout(self, request, queryset):
+        count = 0
+        for order in queryset.filter(status='completed', payout_released=False):
+            # In a real app, call stripe.Payout.create(...)
+            # mock payout
+            Payout.objects.create(
+                user=order.seller,
+                order=order,
+                amount=order.amount - order.platform_fee,
+                status='processed',
+                stripe_payout_id=f"po_{uuid.uuid4().hex[:12]}"
+            )
+            order.payout_released = True
+            order.save()
+            count += 1
+        self.message_user(request, f"Triggered {count} payouts.")
 
 admin.site.register(Order, OrderAdmin)
+
+class SubscriptionPlanAdmin(admin.ModelAdmin):
+    list_display = ['name', 'price', 'is_active']
+
+class UserSubscriptionAdmin(admin.ModelAdmin):
+    list_display = ['user', 'plan', 'status', 'expires_at']
+    list_filter = ['status', 'plan']
+
+class WalletAdmin(admin.ModelAdmin):
+    list_display = ['user', 'balance']
+    search_fields = ['user__username']
+
+class VirtualTransactionAdmin(admin.ModelAdmin):
+    list_display = ['wallet', 'amount', 'transaction_type', 'created_at']
+    list_filter = ['transaction_type', 'created_at']
+
+class ReferralAdmin(admin.ModelAdmin):
+    list_display = ['referrer', 'referred_user', 'status', 'created_at']
+    list_filter = ['status', 'created_at']
+
+class PayoutAdmin(admin.ModelAdmin):
+    list_display = ['user', 'amount', 'status', 'created_at']
+    list_filter = ['status', 'created_at']
+
+admin.site.register(SubscriptionPlan, SubscriptionPlanAdmin)
+admin.site.register(UserSubscription, UserSubscriptionAdmin)
+admin.site.register(Wallet, WalletAdmin)
+admin.site.register(VirtualTransaction, VirtualTransactionAdmin)
+admin.site.register(Referral, ReferralAdmin)
+admin.site.register(Payout, PayoutAdmin)
 
 class DisputeMessageInline(admin.TabularInline):
     model = DisputeMessage
@@ -252,3 +302,29 @@ class SellerFollowAdmin(admin.ModelAdmin):
     search_fields = ['user__username', 'seller__username']
 
 admin.site.register(SellerFollow, SellerFollowAdmin)
+
+@admin.register(LogEntry)
+class LogEntryAdmin(admin.ModelAdmin):
+    list_display = ['action_time', 'user', 'content_type', 'object_repr', 'action_flag']
+    list_filter = ['action_flag', 'content_type', 'user']
+    search_fields = ['object_repr', 'change_message']
+    readonly_fields = ['action_time', 'user', 'content_type', 'object_id', 'object_repr', 'action_flag', 'change_message']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+@admin.register(DailyAggregate)
+class DailyAggregateAdmin(admin.ModelAdmin):
+    list_display = ['date', 'new_users', 'new_posts', 'new_listings', 'new_orders', 'revenue']
+    readonly_fields = ['date', 'new_users', 'new_posts', 'new_listings', 'new_orders', 'revenue']
+
+@admin.register(FeatureFlag)
+class FeatureFlagAdmin(admin.ModelAdmin):
+    list_display = ['name', 'is_enabled', 'rollout_percentage']
+    list_editable = ['is_enabled', 'rollout_percentage']

@@ -1,12 +1,18 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .models import CustomUser, Profile, UserEmailVerification, PostMedia, Post, Comment, Hashtag, Notification
-from .utils import send_verification_email, generate_video_thumbnail, extract_hashtags, extract_mentions
+from decimal import Decimal
+from .models import CustomUser, Profile, UserEmailVerification, PostMedia, Post, Comment, Hashtag, Notification, Wallet, Referral, Order, Payout
+from .utils import send_verification_email, generate_video_thumbnail, extract_hashtags, extract_mentions, send_notification
+import uuid
 
 @receiver(post_save, sender=CustomUser)
 def create_user_related_models(sender, instance, created, **kwargs):
     if created:
-        Profile.objects.create(user=instance)
+        Profile.objects.create(
+            user=instance,
+            referral_code=uuid.uuid4().hex[:8].upper()
+        )
+        Wallet.objects.create(user=instance)
         UserEmailVerification.objects.create(user=instance)
         send_verification_email(instance)
 
@@ -83,3 +89,30 @@ def process_post_content(sender, instance, **kwargs):
 def process_comment_content(sender, instance, **kwargs):
     handle_hashtags(instance, instance.content)
     handle_mentions(instance, instance.content)
+
+@receiver(post_save, sender=Order)
+def handle_order_payout_and_referral(sender, instance, created, **kwargs):
+    if instance.status == 'completed':
+        # 1. Check for Referral Reward
+        # Reward referrer when referred user makes their first sale
+        seller = instance.seller
+        referral = Referral.objects.filter(referred_user=seller, status='pending').first()
+        if referral:
+            # First sale detected for referred user
+            # Reward referrer (e.g., 5.00 in virtual currency)
+            reward = 5.00
+            referral.status = 'rewarded'
+            referral.reward_amount = reward
+            referral.save()
+            
+            # Credit referrer's wallet
+            referrer_wallet, _ = Wallet.objects.get_or_create(user=referral.referrer)
+            referrer_wallet.balance += Decimal(str(reward))
+            referrer_wallet.save()
+            
+            # Send notification
+            send_notification(
+                recipient=referral.referrer,
+                sender=seller, # The user who made the sale
+                notification_type='referral_reward'
+            )

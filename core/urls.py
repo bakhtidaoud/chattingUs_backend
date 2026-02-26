@@ -10,7 +10,9 @@ from .views import (
     ListingViewSet, AttributeDefinitionViewSet, ListingPromotionViewSet, SavedSearchViewSet,
     ConversationViewSet, MessageViewSet, OfferViewSet, ReportViewSet, OrderViewSet,
     DisputeViewSet, DisputeMessageViewSet, ReviewViewSet,
-    WishlistItemViewSet, SellerFollowViewSet, DashboardViewSet
+    WishlistItemViewSet, SellerFollowViewSet, DashboardViewSet,
+    MessageSearchView, NotificationSettingViewSet, SubscriptionPlanViewSet,
+    UserSubscriptionViewSet, WalletViewSet, PayoutViewSet, ReferralViewSet
 )
 from rest_framework.routers import DefaultRouter
 
@@ -41,6 +43,12 @@ router.register(r'reviews', ReviewViewSet, basename='review')
 router.register(r'wishlist', WishlistItemViewSet, basename='wishlist')
 router.register(r'seller-follows', SellerFollowViewSet, basename='seller-follow')
 router.register(r'dashboard', DashboardViewSet, basename='dashboard')
+router.register(r'notification-settings', NotificationSettingViewSet, basename='notification-setting')
+router.register(r'subscription-plans', SubscriptionPlanViewSet, basename='subscription-plan')
+router.register(r'subscriptions', UserSubscriptionViewSet, basename='subscription')
+router.register(r'wallets', WalletViewSet, basename='wallet')
+router.register(r'payouts', PayoutViewSet, basename='payout')
+router.register(r'referrals', ReferralViewSet, basename='referral')
 
 urlpatterns = [
     path('', include(router.urls)),
@@ -59,4 +67,5 @@ urlpatterns = [
     path('2fa/verify/', VerifySMSView.as_view(), name='verify_2fa'),
     path('2fa/disable/', Disable2FAView.as_view(), name='disable_2fa'),
     path('2fa/backup-codes/', StaticBackupCodesView.as_view(), name='backup_codes'),
+    path('messages/search/', MessageSearchView.as_view(), name='message_search'),
 ]

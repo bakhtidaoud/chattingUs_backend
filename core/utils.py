@@ -74,4 +74,47 @@ def send_verification_email(user):
         [user.email]
     )
     email.attach_alternative(html_content, "text/html")
+    email.attach_alternative(html_content, "text/html")
     email.send()
+
+def send_notification(recipient, sender, notification_type, post=None, comment=None, listing=None, priority='normal'):
+    from .models import Notification, NotificationSetting
+    
+    # Get settings for this type
+    setting, created = NotificationSetting.objects.get_or_create(
+        user=recipient,
+        type=notification_type,
+        defaults={'email_enabled': True, 'push_enabled': True, 'in_app_enabled': True}
+    )
+    
+    if setting.in_app_enabled:
+        Notification.objects.create(
+            recipient=recipient,
+            sender=sender,
+            notification_type=notification_type,
+            post=post,
+            comment=comment,
+            listing=listing
+        )
+    
+    if setting.email_enabled:
+        # Mocking email trigger
+        # send_mail(...)
+        pass
+        
+    if setting.push_enabled:
+        # Mocking rich push notification with Android channels and deep linking
+        # payload = {
+        #     'to': recipient.fcm_token,
+        #     'notification': {
+        #         'title': 'New activity!',
+        #         'body': f'You have a new {notification_type}',
+        #         'android_channel_id': notification_type, # Using type as channel ID
+        #     },
+        #     'data': {
+        #         'screen': 'NotificationDetail',
+        #         'id': post.id if post else (listing.id if listing else None),
+        #         'priority': priority
+        #     }
+        # }
+        pass

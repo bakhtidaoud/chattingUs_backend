@@ -31,12 +31,14 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.postgres",
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
@@ -45,6 +47,7 @@ INSTALLED_APPS = [
     "django_otp.plugins.otp_static",
     "taggit",
     "django_celery_beat",
+    "channels",
     "core",
 ]
 
@@ -77,6 +80,16 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "chattingUS_backend.wsgi.application"
+ASGI_APPLICATION = "chattingUS_backend.asgi.application"
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
+}
 
 
 # Database
@@ -135,6 +148,20 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/day',
+        'user': '1000/day',
+        'auth': '5/minute',
+        'posts': '10/minute',
+        'marketplace': '20/minute',
+        'verified_user': '5000/day',
+    }
 }
 
 from datetime import timedelta
@@ -201,4 +228,39 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.process_saved_searches',
         'schedule': crontab(minute=0, hour='*'),
     },
+    'send-daily-notification-digest': {
+        'task': 'core.tasks.send_missed_notification_digest',
+        'schedule': crontab(minute=0, hour=8), # 8 AM daily
+        'args': ('daily',),
+    },
+    'send-weekly-notification-digest': {
+        'task': 'core.tasks.send_missed_notification_digest',
+        'schedule': crontab(minute=0, hour=8, day_of_week='monday'), # 8 AM Monday
+        'args': ('weekly',),
+    },
+    'auto-release-escrow-daily': {
+        'task': 'core.tasks.auto_release_escrow',
+        'schedule': crontab(minute=0, hour=2), # 2 AM daily
+    },
+    'calculate-daily-aggregates': {
+        'task': 'core.tasks.calculate_daily_aggregates',
+        'schedule': crontab(minute=0, hour=1), # 1 AM daily
+    },
 }
+
+# Caching with Redis
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/1',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }
+}
+
+# AWS S3 Settings (for Backups)
+AWS_ACCESS_KEY_ID = 'your_access_key'
+AWS_SECRET_ACCESS_KEY = 'your_secret_key'
+AWS_STORAGE_BUCKET_NAME = 'your_bucket_name'
+AWS_S3_REGION_NAME = 'us-east-1'
