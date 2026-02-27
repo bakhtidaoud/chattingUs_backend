@@ -267,6 +267,12 @@ class PostViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         queryset = Post.objects.all().order_by('-created_at')
+        
+        # Search query
+        search_query = self.request.query_params.get('search')
+        if search_query:
+            queryset = queryset.filter(search_vector=search_query)
+
         if user.is_authenticated:
             # Exclude posts from blocked users and users who blocked me
             blocked_users = Block.objects.filter(user=user).values_list('blocked_user', flat=True)
@@ -531,7 +537,7 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     def suggested(self, request):
         from django.db.models import Count
         user = request.user
-        my_following = Follow.objects.filter(follower=user).values_list('followed_id', flat=True)
+        my_following = Follow.objects.filter(follower=user, status='accepted').values_list('followed_id', flat=True)
         blocked_ids = Block.objects.filter(user=user).values_list('blocked_user_id', flat=True)
         blocked_by_ids = Block.objects.filter(blocked_user=user).values_list('user_id', flat=True)
         
@@ -809,6 +815,12 @@ class ListingViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = Listing.objects.all()
+        
+        # Search query
+        search_query = self.request.query_params.get('search')
+        if search_query:
+            queryset = queryset.filter(search_vector=search_query)
+
         category_id = self.request.query_params.get('category')
         if category_id:
             queryset = queryset.filter(category_id=category_id)

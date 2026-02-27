@@ -3,6 +3,7 @@ from django.dispatch import receiver
 from decimal import Decimal
 from .models import CustomUser, Profile, UserEmailVerification, PostMedia, Post, Comment, Hashtag, Notification, Wallet, Referral, Order, Payout
 from .utils import send_verification_email, generate_video_thumbnail, extract_hashtags, extract_mentions, send_notification
+from .tasks import process_post_media
 import uuid
 
 @receiver(post_save, sender=CustomUser)
@@ -26,6 +27,8 @@ def save_user_related_models(sender, instance, **kwargs):
 def create_post_media_thumbnail(sender, instance, created, **kwargs):
     if created and instance.media_type == 'video' and not instance.thumbnail:
         generate_video_thumbnail(instance)
+    elif created and instance.media_type == 'image' and not instance.thumbnail:
+        process_post_media.delay(instance.id)
 
 def handle_hashtags(instance, text):
     tags = extract_hashtags(text)

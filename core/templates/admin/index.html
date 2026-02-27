@@ -1,0 +1,176 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block content %}
+<div id="content-main">
+  <div class="dashboard-grid">
+    <div class="stat-card">
+      <h3>Total Revenue</h3>
+      <div class="value">${{ total_revenue|floatformat:2 }}</div>
+    </div>
+    <div class="stat-card">
+      <h3>Registered Users</h3>
+      <div class="value">{{ total_users }}</div>
+    </div>
+    <div class="stat-card">
+      <h3>Active Listings</h3>
+      <div class="value">{{ active_listings }}</div>
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
+    <div class="chart-container">
+      <h2>Revenue Growth (Last 30 Days)</h2>
+      <canvas id="salesChart"></canvas>
+    </div>
+    <div class="chart-container">
+      <h2>User Registration Growth</h2>
+      <canvas id="userGrowthChart"></canvas>
+    </div>
+  </div>
+
+  <div class="chart-container" style="max-width: 600px; margin: 0 auto 20px auto;">
+    <h2>Listing Categories Distribution</h2>
+    <canvas id="categoryChart"></canvas>
+  </div>
+
+  {% if app_list %}
+  {% for app in app_list %}
+  <div class="app-{{ app.app_label }} module chart-container">
+    <table>
+      <caption>
+        <a href="{{ app.app_url }}" class="section"
+          title="{% blocktranslate with name=app.name %}Models in the {{ name }} application{% endblocktranslate %}">{{
+          app.name }}</a>
+      </caption>
+      {% for model in app.models %}
+      <tr class="model-{{ model.object_name|lower }}">
+        {% if model.admin_url %}
+        <th scope="row"><a href="{{ model.admin_url }}">{{ model.name }}</a></th>
+        {% else %}
+        <th scope="row">{{ model.name }}</th>
+        {% endif %}
+
+        {% if model.add_url %}
+        <td><a href="{{ model.add_url }}" class="addlink">{% translate 'Add' %}</a></td>
+        {% else %}
+        <td>&nbsp;</td>
+        {% endif %}
+
+        {% if model.admin_url %}
+        {% if model.view_only %}
+        <td><a href="{{ model.admin_url }}" class="viewlink">{% translate 'View' %}</a></td>
+        {% else %}
+        <td><a href="{{ model.admin_url }}" class="changelink">{% translate 'Change' %}</a></td>
+        {% endif %}
+        {% else %}
+        <td>&nbsp;</td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% endfor %}
+  {% else %}
+  <p>{% translate "You don't have permission to view or edit anything." %}</p>
+  {% endif %}
+</div>
+
+<script>
+  const salesData = {{ sales_data_json| safe }};
+  const userGrowthData = {{ user_growth_json| safe }};
+  const categoryData = {{ category_data_json| safe }};
+
+  const commonOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        display: false
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: {
+          display: false
+        }
+      },
+      x: {
+        grid: {
+          display: false
+        }
+      }
+    }
+  };
+
+  // Sales Chart
+  new Chart(document.getElementById('salesChart'), {
+    type: 'line',
+    data: {
+      labels: salesData.labels,
+      datasets: [{
+        label: 'Revenue',
+        data: salesData.values,
+        borderColor: '#6366f1',
+        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+        tension: 0.4,
+        fill: true
+      }]
+    },
+    options: commonOptions
+  });
+
+  // User Growth Chart
+  new Chart(document.getElementById('userGrowthChart'), {
+    type: 'bar',
+    data: {
+      labels: userGrowthData.labels,
+      datasets: [{
+        label: 'New Users',
+        data: userGrowthData.values,
+        backgroundColor: '#a855f7',
+        borderRadius: 4
+      }]
+    },
+    options: commonOptions
+  });
+
+  // Category Distribution Chart
+  new Chart(document.getElementById('categoryChart'), {
+    type: 'doughnut',
+    data: {
+      labels: categoryData.labels,
+      datasets: [{
+        data: categoryData.values,
+        backgroundColor: [
+          '#6366f1', '#a855f7', '#ec4899', '#f43f5e', '#ef4444', '#f97316', '#f59e0b', '#eab308'
+        ],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      plugins: {
+        legend: {
+          position: 'bottom'
+        }
+      }
+    }
+  });
+
+  // Real-time WebSocket Logic (Optional but requested)
+  const analyticsSocket = new WebSocket(
+    (window.location.protocol === 'https:' ? 'wss://' : 'ws://') +
+    window.location.host +
+    '/ws/admin/analytics/'
+  );
+
+  analyticsSocket.onmessage = function (e) {
+    const data = json.loads(e.data);
+    if (data.type === 'dashboard_update') {
+      // Live update values or reload graphs if needed
+      console.log('Real-time update received:', data);
+      location.reload(); // Simple approach, or update chart data
+    }
+  };
+</script>
+{% endblock %}

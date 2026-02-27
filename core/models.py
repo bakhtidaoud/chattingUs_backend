@@ -429,6 +429,17 @@ class Listing(models.Model):
     def __str__(self):
         return self.title
 
+class ListingMedia(models.Model):
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name='media')
+    file = models.ImageField(upload_to='listings/')
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return f"Image for Listing {self.listing.id}"
+
 class ListingPromotion(models.Model):
     PROMOTION_TYPES = [
         ('featured', 'Featured'),
@@ -790,3 +801,26 @@ class FeatureFlag(models.Model):
 
     def __str__(self):
         return f"Flag: {self.name} ({'Enabled' if self.is_enabled else 'Disabled'}, {self.rollout_percentage}%)"
+
+# --- Admin Dashboard Real-time Notification Signals ---
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+
+@receiver(post_save, sender=Order)
+@receiver(post_save, sender=CustomUser)
+@receiver(post_save, sender=Listing)
+def notify_admin_dashboard(sender, instance, created, **kwargs):
+    if created:
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            'admin_analytics',
+            {
+                'type': 'dashboard_update',
+                'data': {
+                    'model': sender.__name__,
+                    'id': str(instance.id)
+                }
+            }
+        )

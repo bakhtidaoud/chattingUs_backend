@@ -1,7 +1,14 @@
 from celery import shared_task
 from django.utils import timezone
-from .models import Story, Listing, SavedSearch, Notification, DailyAggregate, Post, CustomUser, Order
 from django.db.models import Q, Sum
+from django.core.mail import send_mail
+from django.conf import settings
+from PIL import Image
+from django import forms
+import os
+from io import BytesIO
+from django.core.files.base import ContentFile
+from .models import Story, Listing, SavedSearch, Notification, DailyAggregate, Post, CustomUser, Order, PostMedia
 
 @shared_task
 def delete_expired_stories():
@@ -147,3 +154,47 @@ def calculate_daily_aggregates():
     )
     
     return f"Calculated aggregates for {yesterday}"
+
+@shared_task
+def send_email_notification(subject, message, recipient_list):
+    send_mail(
+        subject,
+        message,
+        settings.DEFAULT_FROM_EMAIL,
+        recipient_list,
+        fail_silently=False,
+    )
+    return f"Sent email to {recipient_list}"
+
+@shared_task
+def process_post_media(media_id):
+    try:
+        media = PostMedia.objects.get(id=media_id)
+        if media.media_type == 'image' and media.file:
+            # Open the image using Pillow
+            img = Image.open(media.file.path)
+            
+            # Convert to RGB if necessary (e.g. for PNGs with alpha)
+            if img.mode in ("RGBA", "P"):
+                img = img.convert("RGB")
+            
+            # Create a thumbnail
+            img.thumbnail((300, 300))
+            
+            # Save the thumbnail to a BytesIO object
+            thumb_io = BytesIO()
+            img.save(thumb_io, format='JPEG', quality=85)
+            
+            # Create a ContentFile to save to the model field
+            filename = f"thumb_{os.path.basename(media.file.name)}"
+            media.thumbnail.save(
+                filename,
+                ContentFile(thumb_io.getvalue()),
+                save=False
+            )
+            media.save()
+            return f"Processed thumbnail for media {media_id}"
+    except PostMedia.DoesNotExist:
+        return f"Media {media_id} not found"
+    except Exception as e:
+        return f"Failed to process media {media_id}: {str(e)}"

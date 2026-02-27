@@ -1,0 +1,3 @@
+User: admin | Pass: admin123
+User: alex | Pass: alex123
+User: sarah | Pass: sarah123
