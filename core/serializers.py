@@ -8,7 +8,7 @@ User = get_user_model()
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
-        fields = ['cover_photo', 'occupation', 'interests', 'social_links', 'last_active', 'last_seen', 'is_online']
+        fields = ['cover_photo', 'occupation', 'interests', 'social_links', 'last_active', 'last_seen', 'is_online', 'dashboard_layout']
 
 class UserSerializer(serializers.ModelSerializer):
     profile = ProfileSerializer(read_only=True)
@@ -342,7 +342,7 @@ class ListingSerializer(serializers.ModelSerializer):
 class SavedSearchSerializer(serializers.ModelSerializer):
     class Meta:
         model = SavedSearch
-        fields = ['id', 'user', 'query', 'filters', 'frequency', 'last_checked_at', 'created_at']
+        fields = ['id', 'user', 'query', 'filters', 'frequency', 'alerts_enabled', 'last_checked_at', 'created_at']
         read_only_fields = ['user', 'last_checked_at']
 
 from .models import MessageReaction

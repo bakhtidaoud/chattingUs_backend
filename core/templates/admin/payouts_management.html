@@ -1,0 +1,153 @@
+{% extends "admin/base_site.html" %}
+{% block extrahead %}
+{{ block.super }}
+<style>
+  .payouts-wrapper {
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  .payout-card {
+    background: var(--glass);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    margin-bottom: 24px;
+    padding: 4px;
+  }
+
+  .amount-display {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    font-weight: 800;
+    font-size: 1.25rem;
+    padding: 8px 16px;
+    border-radius: 12px;
+    display: inline-block;
+  }
+
+  .proof-upload {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 12px;
+    border-radius: 16px;
+    border: 1px solid var(--glass-border);
+  }
+
+  .proof-upload input[type="file"] {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="payouts-wrapper">
+  <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px;">
+    <div>
+      <h1 style="margin:0;">Disbursement Terminal</h1>
+      <p style="color: var(--text-muted); margin-top: 4px;">Authorization and processing of provider liquidity requests
+      </p>
+    </div>
+    <div style="text-align: right;">
+      <div
+        style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">
+        Pending Volume</div>
+      <div style="font-size: 1.5rem; font-weight: 800; color: #10b981;">{{ payouts|length }} Trans.</div>
+    </div>
+  </div>
+
+  {% if payouts %}
+  <div class="results">
+    <table>
+      <thead>
+        <tr>
+          <th>Beneficiary Identity</th>
+          <th>Requested Liquidity</th>
+          <th>Request Timestamp</th>
+          <th style="text-align: right;">Disbursement Protocol</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for payout in payouts %}
+        <tr id="payout-{{ payout.id }}">
+          <td>
+            <div style="display: flex; align-items: center; gap: 16px;">
+              <div
+                style="background: var(--glass); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--primary);">
+                <i data-lucide="user" width="18"></i>
+              </div>
+              <div>
+                <div style="font-weight: 700; color: #fff;">{{ payout.user.username }}</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">{{ payout.user.email }}</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="amount-display">${{ payout.amount }}</div>
+          </td>
+          <td style="color: var(--text-muted); font-size: 0.85rem; font-weight: 500;">
+            {{ payout.created_at|date:"Y.m.d" }} <br>
+            <span style="opacity: 0.5;">{{ payout.created_at|time:"H:i" }}</span>
+          </td>
+          <td style="text-align: right;">
+            <form class="proof-upload" onsubmit="markPaid(event, {{ payout.id }})">
+              <input type="file" id="proof-{{ payout.id }}" required>
+              <button type="submit" class="button"
+                style="padding: 10px 20px; font-size: 0.75rem; white-space: nowrap;">Execute Payout</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div
+    style="text-align: center; padding: 100px; background: var(--glass); border-radius: 32px; border: 1px dashed var(--glass-border); margin-top: 40px;">
+    <i data-lucide="banknote" style="width: 64px; height: 64px; color: #10b981; margin-bottom: 24px; opacity: 0.3;"></i>
+    <h2 style="color: #fff; margin-bottom: 8px;">Liquidity Balanced</h2>
+    <p style="color: var(--text-muted);">All provider withdrawal requests have been successfully disbursed.</p>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+  lucide.createIcons();
+
+  function markPaid(event, id) {
+    event.preventDefault();
+    const fileInput = document.getElementById(`proof-${id}`);
+    const formData = new FormData();
+    formData.append('payout_id', id);
+    formData.append('action', 'mark_paid');
+    formData.append('proof', fileInput.files[0]);
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+    const row = document.getElementById(`payout-${id}`);
+    row.style.opacity = '0.5';
+
+    fetch('', {
+      method: 'POST',
+      body: formData
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === 'success') {
+          row.style.opacity = '0';
+          row.style.transform = 'translateY(10px)';
+          setTimeout(() => {
+            row.remove();
+            if (document.querySelectorAll('tbody tr').length === 0) {
+              location.reload();
+            }
+          }, 300);
+        } else {
+          row.style.opacity = '1';
+          alert('CRITICAL: Disbursement sequence aborted. ' + data.message);
+        }
+      });
+  }
+</script>
+{% endblock %}

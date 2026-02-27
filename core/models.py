@@ -54,6 +54,7 @@ class Profile(models.Model):
     is_onboarded = models.BooleanField(default=False)
     referral_code = models.CharField(max_length=20, unique=True, blank=True, null=True)
     referred_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='referrals_made')
+    dashboard_layout = models.JSONField(default=dict, blank=True)
 
     def __str__(self):
         return f"{self.user.username}'s Profile"
@@ -502,6 +503,7 @@ class SavedSearch(models.Model):
     query = models.CharField(max_length=255, blank=True, null=True)
     filters = models.JSONField(default=dict, blank=True)
     frequency = models.CharField(max_length=20, choices=FREQUENCY_CHOICES, default='daily')
+    alerts_enabled = models.BooleanField(default=True)
     last_checked_at = models.DateTimeField(auto_now_add=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
@@ -578,6 +580,7 @@ class Report(models.Model):
         ('investigating', 'Investigating'),
         ('resolved', 'Resolved'),
         ('dismissed', 'Dismissed'),
+        ('escalated', 'Escalated'),
     ]
     REASON_CHOICES = [
         ('spam', 'Spam'),
@@ -774,7 +777,9 @@ class Payout(models.Model):
     order = models.ForeignKey('Order', on_delete=models.SET_NULL, null=True, blank=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     stripe_payout_id = models.CharField(max_length=255, blank=True, null=True)
+    proof_of_payment = models.ImageField(upload_to='payout_proofs/', blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='requested')
+    processed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     def __str__(self):
@@ -802,6 +807,47 @@ class FeatureFlag(models.Model):
     def __str__(self):
         return f"Flag: {self.name} ({'Enabled' if self.is_enabled else 'Disabled'}, {self.rollout_percentage}%)"
 
+class PushNotification(models.Model):
+    SEGMENT_CHOICES = [
+        ('all', 'All Users'),
+        ('verified', 'Verified Users'),
+        ('sellers', 'Sellers'),
+        ('premium', 'Premium Subscribers'),
+    ]
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('scheduled', 'Scheduled'),
+        ('sent', 'Sent'),
+        ('failed', 'Failed'),
+    ]
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    segment = models.CharField(max_length=20, choices=SEGMENT_CHOICES, default='all')
+    scheduled_at = models.DateTimeField(null=True, blank=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Push: {self.title} ({self.status})"
+
+class Webhook(models.Model):
+    EVENT_CHOICES = [
+        ('order.created', 'New Order'),
+        ('order.completed', 'Order Completed'),
+        ('user.registered', 'User Registered'),
+        ('listing.created', 'Listing Created'),
+        ('payout.processed', 'Payout Processed'),
+    ]
+    url = models.URLField(max_length=500)
+    event = models.CharField(max_length=50, choices=EVENT_CHOICES)
+    secret = models.CharField(max_length=100, blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Webhook: {self.event} -> {self.url}"
+
 # --- Admin Dashboard Real-time Notification Signals ---
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -811,16 +857,47 @@ from channels.layers import get_channel_layer
 @receiver(post_save, sender=Order)
 @receiver(post_save, sender=CustomUser)
 @receiver(post_save, sender=Listing)
+@receiver(post_save, sender=Post)
 def notify_admin_dashboard(sender, instance, created, **kwargs):
-    if created:
-        channel_layer = get_channel_layer()
+    channel_layer = get_channel_layer()
+    
+    # Automated Flagging Logic
+    INAPPROPRIATE_WORDS = ['scam', 'fraud', 'fake', 'spam', 'explicit', 'illegal'] # Example list
+    is_flagged = False
+    
+    if sender == Listing:
+        text_to_check = (instance.title + " " + instance.description).lower()
+        if any(word in text_to_check for word in INAPPROPRIATE_WORDS):
+            instance.status = 'pending_review'
+            # We avoid recursion by using update instead of save
+            Listing.objects.filter(id=instance.id).update(status='pending_review')
+            is_flagged = True
+    
+    elif sender == Post:
+        text_to_check = (instance.caption or "").lower()
+        if any(word in text_to_check for word in INAPPROPRIATE_WORDS):
+            # For posts, we might just flag them for investigation by creating a report
+            # Or assume they have a status field (Post doesn't have one yet based on earlier view)
+            # Let's create an auto-report for it
+            Report.objects.get_or_create(
+                reporter=CustomUser.objects.filter(is_superuser=True).first(),
+                content_type=ContentType.objects.get_for_model(Post),
+                object_id=instance.id,
+                reason='inappropriate',
+                description="AUTOMATED FLAG: Inappropriate words detected.",
+                status='pending'
+            )
+            is_flagged = True
+
+    if created or is_flagged:
         async_to_sync(channel_layer.group_send)(
             'admin_analytics',
             {
                 'type': 'dashboard_update',
                 'data': {
                     'model': sender.__name__,
-                    'id': str(instance.id)
+                    'id': str(instance.id),
+                    'flagged': is_flagged
                 }
             }
         )

@@ -1,0 +1,78 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls static admin_list %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+  #content-main {
+    animation: fadeIn 0.4s ease-out;
+  }
+
+  #changelist {
+    background: transparent !important;
+    border: none !important;
+  }
+
+  #changelist-form {
+    background: var(--glass);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    overflow: hidden;
+  }
+
+  .results table {
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+
+  tr:hover td {
+    background: rgba(255, 255, 255, 0.02) !important;
+  }
+
+  /* Action bar premium */
+  .actions {
+    padding: 16px 20px !important;
+    background: rgba(0, 0, 0, 0.2) !important;
+    border-bottom: 1px solid var(--glass-border) !important;
+    color: var(--text-muted) !important;
+  }
+
+  .actions select {
+    background: var(--bg-main) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 8px !important;
+    padding: 5px !important;
+    color: #fff !important;
+  }
+
+  /* Filter sidebar */
+  #changelist-filter {
+    background: var(--glass) !important;
+    border-right: none !important;
+    border-left: 1px solid var(--glass-border) !important;
+    height: auto !important;
+    border-radius: 24px !important;
+    margin-left: 20px !important;
+    padding: 20px !important;
+  }
+
+  #changelist-filter h2 {
+    background: transparent !important;
+    color: #fff !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    font-size: 0.8rem !important;
+    letter-spacing: 0.1em !important;
+  }
+
+  .object-tools a {
+    background: var(--primary) !important;
+    border-radius: 12px !important;
+    padding: 10px 20px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.05em !important;
+  }
+</style>
+{% endblock %}

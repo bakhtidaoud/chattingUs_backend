@@ -1,0 +1,173 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<style>
+  .push-wrapper {
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  .composer-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    margin-top: 32px;
+  }
+
+  .composer-card {
+    background: var(--glass);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 32px;
+    padding: 40px;
+  }
+
+  .composer-card h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-bottom: 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .form-field {
+    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .form-field label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .status-pill {
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .status-sent {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+  }
+
+  .status-scheduled {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+  }
+</style>
+
+<div class="push-wrapper">
+  <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 16px;">
+    <h1 style="margin:0;">Global Broadcast Engine</h1>
+    <span style="color: var(--text-muted); font-size: 0.9rem; font-weight: 500;">Mass communication & segment
+      targeting</span>
+  </div>
+
+  <div class="composer-grid">
+    <!-- Composer -->
+    <div class="composer-card">
+      <h2><i data-lucide="send" class="color-primary"></i> Dispatch Console</h2>
+      <form id="pushForm" method="POST">
+        {% csrf_token %}
+        <div class="form-field">
+          <label>Broadcast Identifier (Title)</label>
+          <input type="text" name="title" placeholder="New Feature Announcement" required>
+        </div>
+        <div class="form-field">
+          <label>Notification Content (Message)</label>
+          <textarea name="message" placeholder="Craft your message here..." required style="height: 120px;"></textarea>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          <div class="form-field">
+            <label>Target Stratum</label>
+            <select name="segment">
+              <option value="all">Unfiltered (All Identities)</option>
+              <option value="verified">Verified Tier</option>
+              <option value="sellers">Provider Network</option>
+              <option value="premium">Elite Subscribers</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Delayed Execution</label>
+            <input type="datetime-local" name="scheduled_at">
+          </div>
+        </div>
+        <button type="submit" class="button" style="width: 100%; padding: 18px; font-weight: 800; margin-top: 16px;">
+          TRANSMIT BROADCAST
+        </button>
+      </form>
+    </div>
+
+    <!-- History -->
+    <div class="composer-card" style="padding-bottom: 20px;">
+      <h2><i data-lucide="history" class="color-secondary"></i> Transmission Log</h2>
+      <div style="margin-top: 8px;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr>
+              <th style="padding: 12px 0;">Signal Metadata</th>
+              <th style="padding: 12px 0;">Stratum</th>
+              <th style="padding: 12px 0; text-align: right;">State</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for push in history %}
+            <tr style="border-bottom: 1px solid var(--glass-border);">
+              <td style="padding: 20px 0;">
+                <div style="font-weight: 700; color: #fff; margin-bottom: 4px;">{{ push.title }}</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">{{ push.created_at|date:"M d, H:i" }} UTC
+                </div>
+              </td>
+              <td style="padding: 20px 0;">
+                <span style="font-size: 0.8rem; font-weight: 600; color: var(--primary);">{{
+                  push.get_segment_display|upper }}</span>
+              </td>
+              <td style="padding: 20px 0; text-align: right;">
+                <span class="status-pill status-{{ push.status }}">
+                  {{ push.status }}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  lucide.createIcons();
+  document.getElementById('pushForm').onsubmit = async function (e) {
+    e.preventDefault();
+    const btn = this.querySelector('button');
+    const originalText = btn.innerText;
+    btn.innerText = 'TRANSMITTING...';
+    btn.disabled = true;
+
+    const formData = new FormData(this);
+    const response = await fetch('', {
+      method: 'POST',
+      body: formData
+    });
+    const data = await response.json();
+
+    if (data.status === 'success') {
+      btn.innerText = 'BROADCAST SENT';
+      btn.style.background = '#10b981';
+      setTimeout(() => location.reload(), 1000);
+    } else {
+      alert('Transmission failure: System link offline.');
+      btn.innerText = originalText;
+      btn.disabled = false;
+    }
+  }
+</script>
+{% endblock %}

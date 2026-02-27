@@ -1,0 +1,216 @@
+{% extends "admin/base_site.html" %}
+{% block extrahead %}
+{{ block.super }}
+<style>
+  .reports-wrapper {
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  .report-group {
+    background: var(--glass);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    margin-bottom: 32px;
+    overflow: hidden;
+  }
+
+  .report-header {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--glass-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .report-target {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #fff;
+  }
+
+  .report-item {
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--glass-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    transition: 0.3s;
+  }
+
+  .report-item:last-child {
+    border-bottom: none;
+  }
+
+  .report-reason {
+    color: #f43f5e;
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .report-meta {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .report-actions {
+    display: flex;
+    gap: 12px;
+  }
+
+  .btn-action {
+    padding: 8px 16px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 10px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: 0.2s;
+  }
+
+  .btn-resolve {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    border-color: rgba(16, 185, 129, 0.2);
+  }
+
+  .btn-investigate {
+    background: rgba(99, 102, 241, 0.1);
+    color: #6366f1;
+    border-color: rgba(99, 102, 241, 0.2);
+  }
+
+  .btn-dismiss {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    border-color: var(--glass-border);
+  }
+
+  .btn-escalate {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+    border-color: rgba(245, 158, 11, 0.2);
+  }
+
+  .btn-action:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.2);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="reports-wrapper">
+  <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px;">
+    <div>
+      <h1 style="margin:0;">Incident Management</h1>
+      <p style="color: var(--text-muted); margin-top: 4px;">Grouped intelligence on community-flagged entities</p>
+    </div>
+    <div
+      style="background: rgba(244, 63, 94, 0.1); color: #f43f5e; padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;">
+      {{ grouped_reports|length }} Active Incident Groups
+    </div>
+  </div>
+
+  {% if grouped_reports %}
+  {% for group in grouped_reports %}
+  <div class="report-group">
+    <div class="report-header">
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <div
+          style="background: var(--primary); width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #fff;">
+          <i data-lucide="shield-alert" width="20"></i>
+        </div>
+        <div>
+          <div class="report-target">{{ group.type|upper }}: {{ group.target }}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">CONSENSUS: {{
+            group.reports|length }} COMPLAINTS</div>
+        </div>
+      </div>
+      <a href="{{ group.target.get_absolute_url|default:'#' }}" target="_blank" class="button"
+        style="padding: 8px 16px; font-size: 0.8rem; background: rgba(255,255,255,0.05) !important;">
+        Inspect Entity
+      </a>
+    </div>
+    {% for report in group.reports %}
+    <div class="report-item" id="report-{{ report.id }}">
+      <div style="max-width: 60%;">
+        <div class="report-reason">
+          <i data-lucide="alert-circle" width="14"></i>
+          {{ report.get_reason_display }}
+        </div>
+        <div class="report-meta">
+          Reported by <strong style="color: #fff;">{{ report.reporter.username }}</strong>
+          <span style="opacity: 0.5;"> • </span>
+          {{ report.created_at|timesince }} ago
+        </div>
+        <p style="margin-top: 12px; font-size: 0.9rem; color: #94a3b8; line-height: 1.6;">{{ report.description }}</p>
+      </div>
+      <div class="report-actions">
+        <button class="btn-action btn-investigate"
+          onclick="manageReport({{ report.id }}, 'investigate')">Investigate</button>
+        <button class="btn-action btn-resolve" onclick="manageReport({{ report.id }}, 'resolve')">Resolve</button>
+        <button class="btn-action btn-escalate" onclick="manageReport({{ report.id }}, 'escalate')">Escalate</button>
+        <button class="btn-action btn-dismiss" onclick="manageReport({{ report.id }}, 'dismiss')">Dismiss</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+  {% else %}
+  <div
+    style="text-align: center; padding: 100px; background: var(--glass); border-radius: 32px; border: 1px dashed var(--glass-border); margin-top: 40px;">
+    <i data-lucide="shield-check" style="width: 64px; height: 64px; color: #10b981; margin-bottom: 24px;"></i>
+    <h2 style="color: #fff; margin-bottom: 8px;">Incident Queue Clear</h2>
+    <p style="color: var(--text-muted);">No community reports require administrative intervention at this time.</p>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+  lucide.createIcons();
+
+  function manageReport(id, action) {
+    const formData = new FormData();
+    formData.append('report_id', id);
+    formData.append('action', action);
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+    const item = document.getElementById(`report-${id}`);
+    item.style.opacity = '0.5';
+
+    fetch('', {
+      method: 'POST',
+      body: formData
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === 'success') {
+          if (action === 'investigate') {
+            item.style.background = 'rgba(99, 102, 241, 0.05)';
+            item.style.opacity = '1';
+          } else {
+            item.style.opacity = '0';
+            item.style.transform = 'translateX(20px)';
+            setTimeout(() => {
+              item.remove();
+              if (document.querySelectorAll('.report-item').length === 0) {
+                location.reload();
+              }
+            }, 300);
+          }
+        } else {
+          item.style.opacity = '1';
+          alert('Incident resolution sequence failed.');
+        }
+      });
+  }
+</script>
+{% endblock %}

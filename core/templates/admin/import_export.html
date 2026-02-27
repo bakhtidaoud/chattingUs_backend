@@ -1,0 +1,190 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<style>
+  .utility-wrapper {
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  .utility-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    margin-top: 32px;
+  }
+
+  .util-card {
+    background: var(--glass);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 32px;
+    padding: 40px;
+    transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .util-card:hover {
+    border-color: var(--primary);
+    box-shadow: 0 20px 40px -20px rgba(99, 102, 241, 0.3);
+  }
+
+  .util-card h3 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-bottom: 12px;
+    letter-spacing: -0.03em;
+  }
+
+  .util-card p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    margin-bottom: 32px;
+    line-height: 1.6;
+  }
+
+  .export-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 20px;
+    color: #fff;
+    text-decoration: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 16px;
+    transition: 0.2s;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .export-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--primary);
+    transform: scale(1.01);
+  }
+
+  .upload-zone {
+    border: 2px dashed var(--glass-border);
+    border-radius: 20px;
+    padding: 40px;
+    text-align: center;
+    transition: 0.3s;
+    margin-bottom: 24px;
+    background: rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+  }
+
+  .upload-zone:hover {
+    border-color: var(--primary);
+    background: rgba(99, 102, 241, 0.05);
+  }
+
+  #import-status {
+    margin-top: 24px;
+    padding: 16px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-align: center;
+    display: none;
+  }
+</style>
+
+<div class="utility-wrapper">
+  <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 16px;">
+    <h1 style="margin:0;">Data Control Systems</h1>
+    <span style="color: var(--text-muted); font-size: 0.9rem; font-weight: 500;">Batch Processing / Archival
+      Utilities</span>
+  </div>
+
+  <div class="utility-grid">
+    <!-- Import Engine -->
+    <div class="util-card">
+      <div style="color: var(--primary); margin-bottom: 20px;"><i data-lucide="upload-cloud" width="40" height="40"></i>
+      </div>
+      <h3>Ingest Engine</h3>
+      <p>Onboard bulk data sets using serialized CSV protocols. Ensure schema alignment before proceeding with
+        ingestion.</p>
+
+      <form id="import-form" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label class="upload-zone" for="file-input">
+          <i data-lucide="file-plus" style="margin-bottom: 12px; opacity: 0.5;"></i>
+          <div style="font-size: 0.9rem; color: var(--text-muted);">Drop CSV here or click to browse</div>
+          <input type="file" id="file-input" name="import_users" accept=".csv" style="display: none;">
+        </label>
+        <button type="button" class="button" style="width: 100%; padding: 18px;" onclick="handleImport()">
+          Initiate Ingestion Sequence
+        </button>
+      </form>
+      <div id="import-status"></div>
+    </div>
+
+    <!-- Export Center -->
+    <div class="util-card">
+      <div style="color: var(--secondary); margin-bottom: 20px;"><i data-lucide="download-cloud" width="40"
+          height="40"></i></div>
+      <h3>Export Repository</h3>
+      <p>Generate high-fidelity snapshots of system datasets for external analysis and regulatory reporting.</p>
+
+      <div style="margin-top: 8px;">
+        <button class="export-btn" onclick="window.location.href='/admin/core/customuser/export/'">
+          <span>Identity Accounts Pipeline</span>
+          <i data-lucide="chevron-right" width="18"></i>
+        </button>
+        <button class="export-btn" onclick="window.location.href='/admin/core/listing/export/'">
+          <span>Marketplace Inventory Index</span>
+          <i data-lucide="chevron-right" width="18"></i>
+        </button>
+        <button class="export-btn" onclick="window.location.href='/admin/core/order/export/'">
+          <span>Transaction Ledger Manifest</span>
+          <i data-lucide="chevron-right" width="18"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  lucide.createIcons();
+
+  async function handleImport() {
+    const form = document.getElementById('import-form');
+    const status = document.getElementById('import-status');
+    const fileInput = document.getElementById('file-input');
+
+    if (!fileInput.files[0]) {
+      status.style.display = 'block';
+      status.style.background = 'rgba(244, 63, 94, 0.1)';
+      status.style.color = '#f43f5e';
+      status.innerText = 'Manifest Required: No file selected.';
+      return;
+    }
+
+    const formData = new FormData(form);
+    status.style.display = 'block';
+    status.style.background = 'rgba(255,255,255,0.05)';
+    status.style.color = '#fff';
+    status.innerText = 'INGESTING...';
+
+    try {
+      const res = await fetch('.', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        status.style.background = 'rgba(16, 185, 129, 0.1)';
+        status.style.color = '#10b981';
+        status.innerText = `Ingestion Complete: ${data.imported} records processed.`;
+      } else {
+        throw new Error('Ingestion sequence failed');
+      }
+    } catch (e) {
+      status.style.background = 'rgba(244, 63, 94, 0.1)';
+      status.style.color = '#f43f5e';
+      status.innerText = 'CRITICAL ERROR: ' + e.message;
+    }
+  }
+</script>
+{% endblock %}

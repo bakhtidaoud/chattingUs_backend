@@ -1,0 +1,161 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<style>
+  .webhooks-wrapper {
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  .register-card {
+    background: var(--glass);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    padding: 32px;
+    margin-bottom: 40px;
+  }
+
+  .register-card h3 {
+    margin-top: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 24px;
+  }
+
+  .webhook-form {
+    display: grid;
+    grid-template-columns: 2fr 1fr auto;
+    gap: 20px;
+    align-items: flex-end;
+  }
+
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .input-group label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .event-pill {
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--primary);
+    padding: 4px 12px;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border: 1px solid rgba(99, 102, 241, 0.2);
+  }
+
+  .url-cell {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: #94a3b8;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+</style>
+
+<div class="webhooks-wrapper">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
+    <h1 style="margin:0;">Event Stream Connectors</h1>
+    <div
+      style="background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;">
+      <span
+        style="display: inline-block; width: 8px; height: 8px; background: #10b981; border-radius: 50%; margin-right: 8px;"></span>
+      Egress Systems Active
+    </div>
+  </div>
+
+  <!-- Registration Panel -->
+  <div class="register-card">
+    <h3>Deploy New Egress Hook</h3>
+    <form method="post" class="webhook-form">
+      {% csrf_token %}
+      <div class="input-group">
+        <label>Target Endpoint URL</label>
+        <input type="url" name="url" placeholder="https://external-service.com/api/v1/webhook" required>
+      </div>
+      <div class="input-group">
+        <label>Event Subscription</label>
+        <select name="event" required>
+          <option value="order.created">Order Inception (order.created)</option>
+          <option value="order.completed">Order Resolution (order.completed)</option>
+          <option value="user.registered">Identity Inception (user.registered)</option>
+          <option value="listing.created">Inventory Inception (listing.created)</option>
+        </select>
+      </div>
+      <button type="submit" class="button" style="padding: 14px 32px;">Connect Stream</button>
+    </form>
+  </div>
+
+  <!-- Active Streams Repository -->
+  <div class="results">
+    <table>
+      <thead>
+        <tr>
+          <th>Event Identifier</th>
+          <th>Destination Payload URL</th>
+          <th>Established</th>
+          <th style="text-align: right;">Diagnostic Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for hook in webhooks %}
+        <tr>
+          <td><span class="event-pill">{{ hook.event }}</span></td>
+          <td>
+            <div class="url-cell" title="{{ hook.url }}">{{ hook.url }}</div>
+          </td>
+          <td style="color: var(--text-muted); font-size: 0.85rem;">{{ hook.created_at|date:"Y.m.d" }}</td>
+          <td style="text-align: right;">
+            <button onclick="testWebhook({{ hook.id }})" class="button"
+              style="background: rgba(255,255,255,0.05) !important; color: #fff; padding: 6px 16px; font-size: 0.75rem;">
+              Fire Test Payload
+            </button>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" style="text-align: center; padding: 60px; color: var(--text-muted);">
+            <i data-lucide="plug-zap-off" style="width: 48px; height: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
+            <p>No event streams established yet. Use the control panel above to register a destination.</p>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  lucide.createIcons();
+
+  async function testWebhook(id) {
+    const btn = event.target;
+    const originalText = btn.innerText;
+    btn.innerText = 'FIRING...';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch(`/admin/system/webhooks/test/${id}/`);
+      const data = await res.json();
+      // Simplified success/fail alert for premium feel (maybe could use a toast later)
+      alert(`DIAGNOSTIC RESULT: ${data.status.toUpperCase()}\n------------------------\n${data.message}`);
+    } catch (e) {
+      alert('CRITICAL: Link Integrity Failure');
+    } finally {
+      btn.innerText = originalText;
+      btn.disabled = false;
+    }
+  }
+</script>
+{% endblock %}

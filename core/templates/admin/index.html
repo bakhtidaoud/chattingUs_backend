@@ -1,110 +1,313 @@
 {% extends "admin/base_site.html" %}
 {% load i18n static %}
 
+{% block extrahead %}
+{{ block.super }}
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  .premium-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    margin-bottom: 32px;
+  }
+
+  .main-metric {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+    transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: slideUp 0.6s ease-out forwards;
+    opacity: 0;
+  }
+
+  .main-metric:nth-child(2) {
+    animation-delay: 0.1s;
+  }
+
+  .main-metric:nth-child(3) {
+    animation-delay: 0.2s;
+  }
+
+  .main-metric:nth-child(4) {
+    animation-delay: 0.3s;
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(20px);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .main-metric:hover {
+    transform: translateY(-8px);
+    border-color: var(--primary);
+    box-shadow: 0 20px 40px -20px rgba(99, 102, 241, 0.5);
+  }
+
+  .metric-icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    margin-bottom: 20px;
+  }
+
+  .metric-title {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+  }
+
+  .metric-value {
+    font-size: 2.25rem;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.04em;
+  }
+
+  /* Quick Action Cards */
+  .actions-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .action-badge {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: 0.2s;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .action-badge:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--primary);
+    transform: translateX(4px);
+  }
+
+  .badge-count {
+    background: var(--primary);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-left: auto;
+  }
+
+  /* Charts Section */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 32px;
+    margin-bottom: 32px;
+  }
+
+  .chart-card {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 32px;
+    padding: 32px;
+    backdrop-filter: blur(20px);
+  }
+
+  .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+
+  .chart-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+
+  /* App Modules */
+  .module-card {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    margin-bottom: 32px;
+    overflow: hidden;
+  }
+
+  .module-card h2 {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 20px 32px;
+    margin: 0;
+    font-size: 1rem;
+    border-bottom: 1px solid var(--glass-border);
+  }
+
+  .module-card table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .module-card td,
+  .module-card th {
+    padding: 16px 32px;
+    border-bottom: 1px solid var(--glass-border);
+    text-align: left;
+  }
+
+  .module-card tr:last-child td,
+  .module-card tr:last-child th {
+    border-bottom: none;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div id="content-main">
-  <div class="dashboard-grid">
-    <div class="stat-card">
-      <h3>Total Revenue</h3>
-      <div class="value">${{ total_revenue|floatformat:2 }}</div>
+  <!-- Top Metrics -->
+  <div class="premium-grid">
+    <div class="main-metric">
+      <div class="metric-icon"><i data-lucide="dollar-sign"></i></div>
+      <div class="metric-title">Total Revenue</div>
+      <div class="metric-value" id="val-rev">${{ total_revenue|floatformat:2 }}</div>
     </div>
-    <div class="stat-card">
-      <h3>Registered Users</h3>
-      <div class="value">{{ total_users }}</div>
+    <div class="main-metric">
+      <div class="metric-icon"><i data-lucide="users"></i></div>
+      <div class="metric-title">Registered Users</div>
+      <div class="metric-value" id="val-users">{{ total_users }}</div>
     </div>
-    <div class="stat-card">
-      <h3>Active Listings</h3>
-      <div class="value">{{ active_listings }}</div>
+    <div class="main-metric">
+      <div class="metric-icon"><i data-lucide="shopping-bag"></i></div>
+      <div class="metric-title">Active Listings</div>
+      <div class="metric-value" id="val-listings">{{ active_listings }}</div>
     </div>
-  </div>
-
-  <div class="dashboard-grid">
-    <div class="chart-container">
-      <h2>Revenue Growth (Last 30 Days)</h2>
-      <canvas id="salesChart"></canvas>
-    </div>
-    <div class="chart-container">
-      <h2>User Registration Growth</h2>
-      <canvas id="userGrowthChart"></canvas>
+    <div class="main-metric">
+      <div class="metric-icon"><i data-lucide="shield-check"></i></div>
+      <div class="metric-title">Security Status</div>
+      <div class="metric-value">Protected</div>
     </div>
   </div>
 
-  <div class="chart-container" style="max-width: 600px; margin: 0 auto 20px auto;">
-    <h2>Listing Categories Distribution</h2>
-    <canvas id="categoryChart"></canvas>
+  <!-- Quick Actions / Alerts -->
+  <div class="actions-row">
+    <a href="{% url 'admin:pending_moderation' %}" class="action-badge">
+      <i data-lucide="clock" style="color: #f59e0b;"></i>
+      <span>Moderation</span>
+      <span class="badge-count">{{ pending_moderation_count }}</span>
+    </a>
+    <a href="{% url 'admin:reports_management' %}" class="action-badge">
+      <i data-lucide="alert-triangle" style="color: #f43f5e;"></i>
+      <span>Reports</span>
+      <span class="badge-count">{{ reports_count }}</span>
+    </a>
+    <a href="{% url 'admin:payouts_management' %}" class="action-badge">
+      <i data-lucide="credit-card" style="color: #10b981;"></i>
+      <span>Payouts</span>
+      <span class="badge-count">{{ payouts_count }}</span>
+    </a>
+    <a href="{% url 'admin:jobs_monitor' %}" class="action-badge">
+      <i data-lucide="server" style="color: #6366f1;"></i>
+      <span>System Jobs</span>
+    </a>
+    <a href="{% url 'admin:audit_logs' %}" class="action-badge">
+      <i data-lucide="file-text" style="color: #a855f7;"></i>
+      <span>Audit Stream</span>
+    </a>
   </div>
 
+  <!-- Charts Area -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-header">
+        <h2>Revenue Velocity</h2>
+        <div style="color: var(--text-muted); font-size: 0.8rem;">Last 30 Days</div>
+      </div>
+      <canvas id="salesChart" height="100"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <h2>Market Distribution</h2>
+      </div>
+      <canvas id="categoryChart"></canvas>
+    </div>
+  </div>
+
+  <!-- App Modules -->
   {% if app_list %}
   {% for app in app_list %}
-  <div class="app-{{ app.app_label }} module chart-container">
+  <div class="module-card">
+    <h2>{{ app.name }}</h2>
     <table>
-      <caption>
-        <a href="{{ app.app_url }}" class="section"
-          title="{% blocktranslate with name=app.name %}Models in the {{ name }} application{% endblocktranslate %}">{{
-          app.name }}</a>
-      </caption>
       {% for model in app.models %}
-      <tr class="model-{{ model.object_name|lower }}">
-        {% if model.admin_url %}
-        <th scope="row"><a href="{{ model.admin_url }}">{{ model.name }}</a></th>
-        {% else %}
-        <th scope="row">{{ model.name }}</th>
-        {% endif %}
-
-        {% if model.add_url %}
-        <td><a href="{{ model.add_url }}" class="addlink">{% translate 'Add' %}</a></td>
-        {% else %}
-        <td>&nbsp;</td>
-        {% endif %}
-
-        {% if model.admin_url %}
-        {% if model.view_only %}
-        <td><a href="{{ model.admin_url }}" class="viewlink">{% translate 'View' %}</a></td>
-        {% else %}
-        <td><a href="{{ model.admin_url }}" class="changelink">{% translate 'Change' %}</a></td>
-        {% endif %}
-        {% else %}
-        <td>&nbsp;</td>
-        {% endif %}
+      <tr>
+        <th scope="row" style="width: 60%;">
+          {% if model.admin_url %}
+          <a href="{{ model.admin_url }}" style="color: #fff; text-decoration: none; font-weight: 500;">{{ model.name
+            }}</a>
+          {% else %}
+          {{ model.name }}
+          {% endif %}
+        </th>
+        <td style="text-align: right;">
+          {% if model.add_url %}
+          <a href="{{ model.add_url }}"
+            style="color: var(--primary); text-decoration: none; font-size: 0.8rem; font-weight: 700;">+ ADD</a>
+          {% endif %}
+        </td>
+        <td style="text-align: right;">
+          {% if model.admin_url %}
+          <a href="{{ model.admin_url }}"
+            style="color: var(--text-muted); text-decoration: none; font-size: 0.8rem;">VIEW ALL</a>
+          {% endif %}
+        </td>
       </tr>
       {% endfor %}
     </table>
   </div>
   {% endfor %}
-  {% else %}
-  <p>{% translate "You don't have permission to view or edit anything." %}</p>
   {% endif %}
 </div>
 
 <script>
-  const salesData = {{ sales_data_json| safe }};
-  const userGrowthData = {{ user_growth_json| safe }};
-  const categoryData = {{ category_data_json| safe }};
+  lucide.createIcons();
 
-  const commonOptions = {
-    responsive: true,
-    plugins: {
-      legend: {
-        display: false
-      }
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        grid: {
-          display: false
-        }
-      },
-      x: {
-        grid: {
-          display: false
-        }
-      }
-    }
-  };
+  const salesData = JSON.parse('{{ sales_data_json|safe }}');
+  const categoryData = JSON.parse('{{ category_data_json|safe }}');
+
+  // Chart Defaults
+  Chart.defaults.color = '#94a3b8';
+  Chart.defaults.font.family = "'Outfit', sans-serif";
 
   // Sales Chart
-  new Chart(document.getElementById('salesChart'), {
+  const salesCtx = document.getElementById('salesChart').getContext('2d');
+  const salesGradient = salesCtx.createLinearGradient(0, 0, 0, 400);
+  salesGradient.addColorStop(0, 'rgba(99, 102, 241, 0.4)');
+  salesGradient.addColorStop(1, 'rgba(99, 102, 241, 0)');
+
+  const salesChart = new Chart(salesCtx, {
     type: 'line',
     data: {
       labels: salesData.labels,
@@ -112,52 +315,46 @@
         label: 'Revenue',
         data: salesData.values,
         borderColor: '#6366f1',
-        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+        borderWidth: 3,
+        pointBackgroundColor: '#6366f1',
+        pointBorderColor: 'rgba(255,255,255,0.1)',
+        pointHoverRadius: 6,
         tension: 0.4,
-        fill: true
+        fill: true,
+        backgroundColor: salesGradient
       }]
     },
-    options: commonOptions
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { grid: { color: 'rgba(255,255,255,0.05)' }, border: { display: false } },
+        x: { grid: { display: false }, border: { display: false } }
+      }
+    }
   });
 
-  // User Growth Chart
-  new Chart(document.getElementById('userGrowthChart'), {
-    type: 'bar',
-    data: {
-      labels: userGrowthData.labels,
-      datasets: [{
-        label: 'New Users',
-        data: userGrowthData.values,
-        backgroundColor: '#a855f7',
-        borderRadius: 4
-      }]
-    },
-    options: commonOptions
-  });
-
-  // Category Distribution Chart
+  // Category Chart
   new Chart(document.getElementById('categoryChart'), {
     type: 'doughnut',
     data: {
       labels: categoryData.labels,
       datasets: [{
         data: categoryData.values,
-        backgroundColor: [
-          '#6366f1', '#a855f7', '#ec4899', '#f43f5e', '#ef4444', '#f97316', '#f59e0b', '#eab308'
-        ],
-        borderWidth: 0
+        backgroundColor: ['#6366f1', '#a855f7', '#ec4899', '#f43f5e', '#ef4444'],
+        borderWidth: 0,
+        hoverOffset: 20
       }]
     },
     options: {
+      cutout: '75%',
       plugins: {
-        legend: {
-          position: 'bottom'
-        }
+        legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true, padding: 20 } }
       }
     }
   });
 
-  // Real-time WebSocket Logic (Optional but requested)
+  // Real-time WebSocket Logic
   const analyticsSocket = new WebSocket(
     (window.location.protocol === 'https:' ? 'wss://' : 'ws://') +
     window.location.host +
@@ -165,11 +362,10 @@
   );
 
   analyticsSocket.onmessage = function (e) {
-    const data = json.loads(e.data);
+    const data = JSON.parse(e.data);
     if (data.type === 'dashboard_update') {
-      // Live update values or reload graphs if needed
-      console.log('Real-time update received:', data);
-      location.reload(); // Simple approach, or update chart data
+      // Smoothly reload for now to catch all aggregates
+      location.reload();
     }
   };
 </script>

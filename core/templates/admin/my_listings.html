@@ -1,0 +1,155 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<style>
+  .inventory-wrapper {
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  .status-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 40px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 6px;
+    border-radius: 16px;
+    width: fit-content;
+    border: 1px solid var(--glass-border);
+  }
+
+  .tab-link {
+    padding: 10px 24px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: 0.2s;
+  }
+
+  .tab-link:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .tab-link.active {
+    background: var(--primary);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  }
+
+  .inventory-item {
+    background: var(--glass);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    padding: 20px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    transition: 0.3s;
+  }
+
+  .inventory-item:hover {
+    transform: translateX(8px);
+    border-color: var(--primary);
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .item-preview {
+    width: 100px;
+    height: 100px;
+    border-radius: 16px;
+    object-fit: cover;
+    background: #000;
+    border: 1px solid var(--glass-border);
+  }
+
+  .item-info {
+    flex: 1;
+  }
+
+  .item-title {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 6px;
+    letter-spacing: -0.02em;
+  }
+
+  .item-price {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--primary);
+  }
+
+  .item-date {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+</style>
+
+<div class="inventory-wrapper">
+  <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 32px;">
+    <h1 style="margin:0;">Marketplace Assets</h1>
+    <span style="color: var(--text-muted); font-size: 0.9rem; font-weight: 500;">Inventory monitoring & lifecycle
+      management</span>
+  </div>
+
+  <div class="status-tabs">
+    <a href="?status=active" class="tab-link {% if current_status == 'active' %}active{% endif %}">Active Manifest</a>
+    <a href="?status=sold" class="tab-link {% if current_status == 'sold' %}active{% endif %}">Liquidated</a>
+    <a href="?status=pending_review"
+      class="tab-link {% if current_status == 'pending_review' %}active{% endif %}">Pending Validation</a>
+    <a href="?status=expired" class="tab-link {% if current_status == 'expired' %}active{% endif %}">Decommissioned</a>
+  </div>
+
+  {% if listings %}
+  {% for listing in listings %}
+  <div class="inventory-item">
+    <img
+      src="{{ listing.media.first.file.url|default:'https://api.dicebear.com/7.x/shapes/svg?seed='|add:listing.title }}"
+      class="item-preview">
+    <div class="item-info">
+      <div class="item-title">{{ listing.title }}</div>
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <div class="item-price">${{ listing.price }}</div>
+        <div style="width: 1px; height: 12px; background: var(--glass-border);"></div>
+        <div class="item-date">INCEPTED: {{ listing.created_at|date:"Y.m.d" }}</div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 12px;">
+      <button class="button" style="background: rgba(255,255,255,0.05) !important; color: #fff; padding: 10px 20px;"
+        onclick="window.location.href='/admin/core/listing/{{ listing.id }}/change/'">
+        MODIFY_RECORD
+      </button>
+      {% if listing.status == 'expired' %}
+      <button class="button" style="padding: 10px 20px;">
+        RENEW_LEASE
+      </button>
+      {% endif %}
+      <button class="button"
+        style="background: rgba(244, 63, 94, 0.1) !important; color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.2); padding: 10px 20px;">
+        PURGE
+      </button>
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <div
+    style="text-align: center; padding: 100px; background: var(--glass); border-radius: 32px; border: 1px dashed var(--glass-border);">
+    <i data-lucide="package-search"
+      style="width: 64px; height: 64px; color: var(--text-muted); margin-bottom: 24px; opacity: 0.5;"></i>
+    <h2 style="color: #fff; margin-bottom: 8px;">Null Sector Found</h2>
+    <p style="color: var(--text-muted);">No records identified for current status: <strong>{{ current_status|upper
+        }}</strong></p>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+  lucide.createIcons();
+</script>
+{% endblock %}

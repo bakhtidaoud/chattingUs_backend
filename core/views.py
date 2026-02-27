@@ -963,6 +963,13 @@ class SavedSearchViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
+    @action(detail=True, methods=['post'])
+    def toggle_alerts(self, request, pk=None):
+        search = self.get_object()
+        search.alerts_enabled = not search.alerts_enabled
+        search.save()
+        return Response({'status': 'alerts toggled', 'enabled': search.alerts_enabled})
+
 class ConversationViewSet(viewsets.ModelViewSet):
     serializer_class = ConversationSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -1010,6 +1017,12 @@ class ConversationViewSet(viewsets.ModelViewSet):
             return Response({'status': 'participant removed'})
         except CustomUser.DoesNotExist:
             return Response({'error': 'User not found.'}, status=404)
+
+    @action(detail=True, methods=['post'])
+    def mark_all_as_read(self, request, pk=None):
+        conversation = self.get_object()
+        conversation.messages.filter(is_read=False).exclude(sender=request.user).update(is_read=True)
+        return Response({'status': 'messages marked as read'})
 
 class MessageViewSet(viewsets.ModelViewSet):
     serializer_class = MessageSerializer
@@ -1301,6 +1314,62 @@ class DashboardViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     @action(detail=False, methods=['get'])
+    def seller_dashboard(self, request):
+        user = request.user
+        
+        # 1. Revenue Chart (Daily for the last 30 days)
+        from django_celery_beat.models import PeriodicTask # used for jobs status later
+        from django.db.models import Sum, Count
+        from datetime import timedelta
+        
+        thirty_days_ago = timezone.now() - timedelta(days=30)
+        revenue_data = Order.objects.filter(
+            seller=user, 
+            status='completed',
+            created_at__gte=thirty_days_ago
+        ).extra(select={'day': "date(created_at)"}) \
+         .values('day') \
+         .annotate(revenue=Sum('amount')) \
+         .order_by('day')
+
+        # 2. Recent Orders
+        recent_orders = Order.objects.filter(seller=user).order_by('-created_at')[:5]
+        
+        # 3. Top Selling Items
+        top_items = Listing.objects.filter(user=user) \
+            .annotate(sales_count=Count('orders')) \
+            .order_by('-sales_count')[:5]
+            
+        # 4. Payout History
+        payouts = Payout.objects.filter(user=user).order_by('-created_at')[:5]
+        
+        # 5. Dashboard Layout
+        layout = user.profile.dashboard_layout
+
+        return Response({
+            'stats': {
+                'total_earnings': Order.objects.filter(seller=user, status='completed').aggregate(Sum('amount'))['amount__sum'] or 0,
+                'pending_payout': Order.objects.filter(seller=user, status__in=['paid', 'shipped'], payout_released=False).aggregate(Sum('amount'))['amount__sum'] or 0,
+                'active_listings': Listing.objects.filter(user=user, status='active').count()
+            },
+            'revenue_chart': revenue_data,
+            'recent_orders': OrderSerializer(recent_orders, many=True).data,
+            'top_items': ListingSerializer(top_items, many=True).data,
+            'payout_history': PayoutSerializer(payouts, many=True).data,
+            'layout': layout
+        })
+
+    @action(detail=False, methods=['post'])
+    def update_layout(self, request):
+        layout = request.data.get('layout')
+        if layout:
+            profile = request.user.profile
+            profile.dashboard_layout = layout
+            profile.save()
+            return Response({'status': 'success'})
+        return Response({'error': 'Layout missing'}, status=400)
+
+    @action(detail=False, methods=['get'])
     def seller_stats(self, request):
         user = request.user
         listings = Listing.objects.filter(user=user)
@@ -1313,7 +1382,6 @@ class DashboardViewSet(viewsets.ViewSet):
         
         conversion_rate = (total_sales / total_views * 100) if total_views > 0 else 0
         
-        # Monthly Revenue Chart
         from django.db.models.functions import TruncMonth
         from django.db.models import Sum
         

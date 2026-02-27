@@ -1,0 +1,186 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<style>
+  .profile-wrapper {
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  .profile-card {
+    background: var(--glass);
+    backdrop-filter: blur(24px);
+    border: 1px solid var(--glass-border);
+    border-radius: 32px;
+    padding: 48px;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 64px;
+    margin-top: 32px;
+  }
+
+  .avatar-column {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .avatar-outer {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    padding: 8px;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    margin-bottom: 32px;
+    position: relative;
+    box-shadow: 0 20px 40px -10px rgba(99, 102, 241, 0.5);
+  }
+
+  .avatar-inner {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #000;
+    border: 4px solid #0f172a;
+  }
+
+  .edit-overlay {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: #fff;
+    color: #000;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: 0.2s;
+  }
+
+  .edit-overlay:hover {
+    transform: scale(1.1);
+  }
+
+  .form-group {
+    margin-bottom: 32px;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 12px;
+  }
+</style>
+
+<div class="profile-wrapper">
+  <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 16px;">
+    <h1 style="margin:0;">Identity Configuration</h1>
+    <span style="color: var(--text-muted); font-size: 0.9rem; font-weight: 500;">Administrative Profile & Authorization
+      Settings</span>
+  </div>
+
+  <div class="profile-card">
+    <!-- Identity Visuals -->
+    <div class="avatar-column">
+      <div class="avatar-outer">
+        <img src="{{ user.avatar.url|default:'https://api.dicebear.com/7.x/avataaars/svg?seed='|add:user.username }}"
+          class="avatar-inner" id="avatarPreview">
+        <label class="edit-overlay" for="avatarInput">
+          <i data-lucide="camera" width="18"></i>
+        </label>
+        <input type="file" id="avatarInput" accept="image/*" style="display: none;">
+      </div>
+
+      <div style="text-align: center;">
+        <div style="font-size: 1.25rem; font-weight: 800; color: #fff; margin-bottom: 4px;">{{ user.username }}</div>
+        <div style="font-size: 0.8rem; color: var(--primary); font-weight: 700; text-transform: uppercase;">System
+          Administrator</div>
+      </div>
+
+      <div style="margin-top: 40px; width: 100%;">
+        <a href="{% url 'admin:password_change' %}" class="button"
+          style="display: block; background: rgba(255,255,255,0.05) !important; color: #fff; padding: 12px; font-size: 0.8rem; text-decoration: none;">
+          ROTATION_KEY_RESET
+        </a>
+      </div>
+    </div>
+
+    <!-- Identity Parameters -->
+    <div class="details-column">
+      <form id="profileForm" method="POST">
+        {% csrf_token %}
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px;">
+          <div class="form-group">
+            <label>Public Alias</label>
+            <input type="text" value="{{ user.username }}" disabled style="opacity: 0.5;">
+          </div>
+          <div class="form-group">
+            <label>Communications Link (Email)</label>
+            <input type="email" value="{{ user.email }}" disabled style="opacity: 0.5;">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Identity Biography (Dossier)</label>
+          <textarea name="bio" rows="6"
+            placeholder="Describe your administrative role and background...">{{ user.bio }}</textarea>
+        </div>
+
+        <div style="border-top: 1px solid var(--glass-border); padding-top: 32px; margin-top: 16px;">
+          <button type="submit" class="button" style="padding: 18px 48px; font-weight: 800;">
+            SYNCHRONIZE PROFILE
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  lucide.createIcons();
+
+  document.getElementById('profileForm').onsubmit = async function (e) {
+    e.preventDefault();
+    const btn = this.querySelector('button');
+    const originalText = btn.innerText;
+    btn.innerText = 'SYNCHRONIZING...';
+    btn.disabled = true;
+
+    const formData = new FormData(this);
+    const response = await fetch('', { method: 'POST', body: formData });
+    const data = await response.json();
+
+    if (data.status === 'success') {
+      btn.innerText = 'SYNC_COMPLETE';
+      btn.style.background = '#10b981';
+      setTimeout(() => {
+        btn.innerText = originalText;
+        btn.style.background = '';
+        btn.disabled = false;
+      }, 2000);
+    }
+  };
+
+  document.getElementById('avatarInput').onchange = function (e) {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function (e) { document.getElementById('avatarPreview').src = e.target.result; };
+      reader.readAsDataURL(file);
+
+      const formData = new FormData();
+      formData.append('avatar', file);
+      formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+      fetch('', { method: 'POST', body: formData });
+    }
+  };
+</script>
+{% endblock %}

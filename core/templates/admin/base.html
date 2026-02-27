@@ -1,0 +1,270 @@
+{% load i18n static %}
+<!DOCTYPE html>
+{% get_current_language as LANGUAGE_CODE %}{% get_current_language_bidi as LANGUAGE_BIDI %}
+<html lang="{{ LANGUAGE_CODE|default:" en-us" }}" dir="{{ LANGUAGE_BIDI|yesno:'rtl,ltr,auto' }}">
+
+<head>
+  <title>{% block title %}{% endblock %}</title>
+  {% block extrastyle %}{% endblock %}
+  {% if LANGUAGE_BIDI %}
+  <link rel="stylesheet" href="{% static 'admin/css/rtl.css' %}">{% endif %}
+  {% block extrahead %}{% endblock %}
+  {% block responsive %}
+  <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1">
+  {% endblock %}
+  {% block blockbots %}
+  <meta name="robots" content="NONE,NOARCHIVE">{% endblock %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-dark: #4f46e5;
+      --secondary: #a855f7;
+      --bg-main: #0f172a;
+      --bg-sidebar: #111827;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --glass: rgba(255, 255, 255, 0.03);
+      --glass-border: rgba(255, 255, 255, 0.1);
+      --accent-glow: rgba(99, 102, 241, 0.2);
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg-main);
+      color: var(--text-main);
+      font-family: 'Outfit', sans-serif;
+      min-height: 100vh;
+    }
+
+    #container {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* Premium Header */
+    #header {
+      background: rgba(15, 23, 42, 0.8) !important;
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--glass-border);
+      padding: 16px 32px !important;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+    }
+
+    #branding h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+    }
+
+    #branding h1 a {
+      color: #fff !important;
+      text-decoration: none;
+      background: linear-gradient(to right, #fff, #94a3b8);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    #user-tools {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    #user-tools a {
+      color: var(--primary) !important;
+      text-decoration: none;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Main Layout */
+    .main.wrapper {
+      display: flex;
+      flex: 1;
+    }
+
+    #nav-sidebar {
+      width: 280px;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--glass-border);
+      flex-shrink: 0;
+      padding: 20px 0;
+    }
+
+    #content {
+      flex: 1;
+      padding: 40px;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    /* Dashboard & Cards */
+    .stat-card {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      padding: 24px;
+      transition: 0.3s;
+    }
+
+    .stat-card:hover {
+      background: rgba(255, 255, 255, 0.05);
+      transform: translateY(-4px);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Tables & Lists */
+    .results table {
+      width: 100%;
+      border-spacing: 0;
+      background: var(--glass);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--glass-border);
+    }
+
+    th {
+      text-align: left;
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    td {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--glass-border);
+      font-size: 0.9rem;
+    }
+
+    /* Forms */
+    input[type=text],
+    input[type=password],
+    select,
+    textarea {
+      background: rgba(0, 0, 0, 0.2) !important;
+      border: 1px solid var(--glass-border) !important;
+      border-radius: 10px !important;
+      color: #fff !important;
+      padding: 10px 14px !important;
+      font-family: inherit;
+    }
+
+    input:focus {
+      border-color: var(--primary) !important;
+      box-shadow: 0 0 0 3px var(--accent-glow) !important;
+    }
+
+    .button,
+    input[type=submit] {
+      background: var(--primary) !important;
+      color: #fff !important;
+      border: none !important;
+      padding: 12px 24px !important;
+      border-radius: 10px !important;
+      font-weight: 600 !important;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .button:hover {
+      background: var(--primary-dark) !important;
+      transform: scale(1.02);
+    }
+
+    /* Breadcrumbs */
+    .breadcrumbs {
+      padding: 12px 32px;
+      background: rgba(0, 0, 0, 0.1);
+      border-bottom: 1px solid var(--glass-border);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .breadcrumbs a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    /* Messages */
+    .messagelist li {
+      list-style: none;
+      padding: 12px 20px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      font-size: 0.9rem;
+      background: rgba(16, 185, 129, 0.1);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+  </style>
+</head>
+
+<body class="{% block bodyclass %}{% endblock %}">
+
+  <div id="container">
+    {% if not is_popup %}
+    <header id="header">
+      <div id="branding">
+        {% block branding %}{% endblock %}
+      </div>
+      {% block nav-global %}{% endblock %}
+      {% if user.is_active and user.is_staff %}
+      <div id="user-tools">
+        <span>Welcome, <strong>{{ user.username }}</strong></span>
+        <a href="{% url 'admin:index' %}">Dashboard</a>
+        <form id="logout-form" method="post" action="{% url 'admin:logout' %}">
+          {% csrf_token %}
+          <button type="submit"
+            style="background:none; border:none; color:var(--primary); cursor:pointer; font:inherit; padding:0; text-transform:uppercase; font-weight:700;">Logout</button>
+        </form>
+      </div>
+      {% endif %}
+    </header>
+    {% block breadcrumbs %}{% endblock %}
+    {% endif %}
+
+    <div class="main wrapper">
+      {% block nav-sidebar %}{% include "admin/nav_sidebar.html" %}{% endblock %}
+
+      <main id="content">
+        {% block messages %}
+        {% if messages %}
+        <ul class="messagelist">
+          {% for message in messages %}
+          <li{% if message.tags %} class="{{ message.tags }}" {% endif %}>{{ message|capfirst }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% endblock %}
+
+        <div id="content-main">
+          {% block content %}{% endblock %}
+        </div>
+      </main>
+    </div>
+  </div>
+
+</body>
+
+</html>

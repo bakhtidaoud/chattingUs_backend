@@ -1,0 +1,140 @@
+{% extends "admin/change_form.html" %}
+{% load i18n static %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+  /* Premium Form Overrides */
+  #content-main {
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  .module {
+    background: var(--glass) !important;
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 20px !important;
+    padding: 20px !important;
+    margin-bottom: 24px !important;
+  }
+
+  fieldset {
+    border: none !important;
+    margin-bottom: 30px !important;
+  }
+
+  .form-row {
+    padding: 20px !important;
+    border-bottom: 1px solid var(--glass-border) !important;
+  }
+
+  .form-row:last-child {
+    border-bottom: none !important;
+  }
+
+  label {
+    font-weight: 700 !important;
+    color: var(--text-muted) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+  }
+
+  .submit-row {
+    background: var(--bg-sidebar) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 16px !important;
+    padding: 20px !important;
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.2) !important;
+  }
+
+  /* Presence Badge Premium */
+  .presence-badge {
+    background: var(--glass) !important;
+    backdrop-filter: blur(12px) !important;
+    border: 1px solid var(--glass-border) !important;
+    padding: 10px 16px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    animation: slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes slideInRight {
+    from {
+      transform: translateX(50px);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    box-shadow: 0 0 10px currentColor;
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const objectId = "{{ object_id }}";
+    const modelName = "{{ opts.model_name }}";
+    if (!objectId || objectId === "None") return;
+
+    const resourceId = `${modelName}_${objectId}`;
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const socket = new WebSocket(`${protocol}://${window.location.host}/ws/admin/presence/${resourceId}/`);
+
+    const presenceContainer = document.createElement('div');
+    presenceContainer.id = 'presence-indicator';
+    presenceContainer.style.cssText = 'position: fixed; top: 120px; right: 40px; z-index: 1000; display: flex; flex-direction: column; gap: 12px; align-items: flex-end;';
+    document.body.appendChild(presenceContainer);
+
+    const activeAdmins = new Map();
+
+    socket.onmessage = function (e) {
+      const data = JSON.parse(e.data);
+      if (data.type === 'presence_update') {
+        if (data.action === 'join' || data.action === 'editing') {
+          activeAdmins.set(data.user_id, { username: data.username, state: data.action });
+        } else if (data.action === 'leave') {
+          activeAdmins.delete(data.user_id);
+        }
+        renderPresence();
+      }
+    };
+
+    function renderPresence() {
+      presenceContainer.innerHTML = '';
+      activeAdmins.forEach((info, id) => {
+        const badge = document.createElement('div');
+        badge.className = 'presence-badge';
+
+        const color = info.state === 'editing' ? '#f43f5e' : '#10b981';
+        badge.innerHTML = `
+                    <div class="status-dot" style="background: ${color}; color: ${color}"></div>
+                    <div style="font-size: 0.8rem; font-weight: 700; color: #fff;">
+                        ${info.username} <span style="opacity: 0.6; font-weight: 500;">IS ${info.state === 'editing' ? 'EDITING' : 'VIEWING'}</span>
+                    </div>
+                `;
+        presenceContainer.appendChild(badge);
+      });
+    }
+
+    const inputs = document.querySelectorAll('input, textarea, select');
+    inputs.forEach(input => {
+      input.addEventListener('input', () => {
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ type: 'editing' }));
+        }
+      }, { once: true });
+    });
+  });
+</script>
+{% endblock %}

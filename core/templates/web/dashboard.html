@@ -1,0 +1,174 @@
+{% extends "admin/base_site.html" %}
+<!-- Reuse admin base for styling or create a dedicated one -->
+{% block content %}
+<div class="dashboard-wrapper" style="padding: 20px; font-family: 'Inter', sans-serif; background: #f9fafb;">
+  <div class="header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+    <h1 style="font-weight: 700; color: #111827; margin: 0;">Sellers Dashboard</h1>
+    <button id="save-layout" class="button"
+      style="background: #6366f1; color: white; padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; transition: 0.2s;">
+      Save Layout
+    </button>
+  </div>
+
+  <div id="dashboard-grid" class="grid-container"
+    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px;">
+    <!-- Card: Earnings -->
+    <div class="card" data-id="earnings" draggable="true"
+      style="background: white; border-radius: 16px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); cursor: move;">
+      <h3 style="margin-top:0; color: #4b5563;">Earnings Overview</h3>
+      <canvas id="earningsChart" height="200"></canvas>
+    </div>
+
+    <!-- Card: Recent Orders -->
+    <div class="card" data-id="orders" draggable="true"
+      style="background: white; border-radius: 16px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); cursor: move;">
+      <h3 style="margin-top:0; color: #4b5563;">Recent Orders</h3>
+      <div id="recent-orders-list">
+        <div style="padding: 10px; text-align: center; color: #9ca3af;">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Card: Top Items -->
+    <div class="card" data-id="top_items" draggable="true"
+      style="background: white; border-radius: 16px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); cursor: move;">
+      <h3 style="margin-top:0; color: #4b5563;">Top Selling Items</h3>
+      <div id="top-items-list">
+        <div style="padding: 10px; text-align: center; color: #9ca3af;">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Card: Payouts -->
+    <div class="card" data-id="payouts" draggable="true"
+      style="background: white; border-radius: 16px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); cursor: move;">
+      <h3 style="margin-top:0; color: #4b5563;">Payout History</h3>
+      <div id="payout-history-list">
+        <div style="padding: 10px; text-align: center; color: #9ca3af;">Loading...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const grid = document.getElementById('dashboard-grid');
+    let draggedItem = null;
+
+    // 1. Fetch Data
+    fetch('/api/dashboard/seller_dashboard/')
+      .then(res => res.json())
+      .then(data => {
+        initDashboard(data);
+        applyLayout(data.layout);
+      });
+
+    function initDashboard(data) {
+      // Stats & Charts
+      const ctx = document.getElementById('earningsChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: data.revenue_chart.map(d => d.day),
+          datasets: [{
+            label: 'Revenue ($)',
+            data: data.revenue_chart.map(d => d.revenue),
+            borderColor: '#6366f1',
+            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+
+      // Orders
+      const ordersList = document.getElementById('recent-orders-list');
+      ordersList.innerHTML = data.recent_orders.map(o => `
+                <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f3f4f6;">
+                    <div>
+                        <div style="font-weight: 600; color: #111827;">${o.listing_title}</div>
+                        <div style="font-size: 12px; color: #6b7280;">${new Date(o.created_at).toLocaleDateString()}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-weight: 700; color: #059669;">$${o.amount}</div>
+                        <div style="font-size: 12px; color: #9ca3af;">${o.status.toUpperCase()}</div>
+                    </div>
+                </div>
+            `).join('') || '<div style="padding:10px; text-align:center;">No orders yet</div>';
+
+      // Top Items
+      const itemsList = document.getElementById('top-items-list');
+      itemsList.innerHTML = data.top_items.map(i => `
+                <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #f3f4f6;">
+                    <div style="width: 40px; height: 40px; background: #e5e7eb; border-radius: 8px; margin-right: 12px;"></div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; color: #111827;">${i.title}</div>
+                        <div style="font-size: 12px; color: #6b7280;">$${i.price}</div>
+                    </div>
+                    <div style="font-weight: 600; color: #6366f1;">${i.sales_count} Sales</div>
+                </div>
+            `).join('') || '<div style="padding:10px; text-align:center;">No sales yet</div>';
+
+      // Payouts
+      const payoutList = document.getElementById('payout-history-list');
+      payoutList.innerHTML = data.payout_history.map(p => `
+                <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f3f4f6;">
+                    <div>
+                        <div style="font-weight: 600; color: #111827;">Payment Request</div>
+                        <div style="font-size: 12px; color: #6b7280;">${new Date(p.created_at).toLocaleDateString()}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-weight: 700; color: #374151;">$${p.amount}</div>
+                        <div style="font-size: 12px; color: ${p.status === 'processed' ? '#10b981' : '#f59e0b'};">${p.status.toUpperCase()}</div>
+                    </div>
+                </div>
+            `).join('') || '<div style="padding:10px; text-align:center;">No payouts yet</div>';
+    }
+
+    // 2. Drag and Drop Logic
+    grid.addEventListener('dragstart', function (e) {
+      draggedItem = e.target.closest('.card');
+      e.dataTransfer.effectAllowed = 'move';
+      e.target.style.opacity = '0.5';
+    });
+
+    grid.addEventListener('dragend', function (e) {
+      e.target.style.opacity = '1';
+    });
+
+    grid.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      const target = e.target.closest('.card');
+      if (target && target !== draggedItem) {
+        const rect = target.getBoundingClientRect();
+        const next = (e.clientY - rect.top) / (rect.bottom - rect.top) > 0.5;
+        grid.insertBefore(draggedItem, next ? target.nextSibling : target);
+      }
+    });
+
+    // 3. Layout Persistence
+    document.getElementById('save-layout').addEventListener('click', function () {
+      const order = Array.from(grid.children).map(c => c.dataset.id);
+      fetch('/api/dashboard/update_layout/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ layout: { order: order } })
+      }).then(() => {
+        alert('Layout saved!');
+      });
+    });
+
+    function applyLayout(layout) {
+      if (layout && layout.order) {
+        layout.order.forEach(id => {
+          const el = grid.querySelector(`[data-id="${id}"]`);
+          if (el) grid.appendChild(el);
+        });
+      }
+    }
+  });
+</script>
+{% endblock %}

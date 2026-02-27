@@ -1,10 +1,26 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from decimal import Decimal
-from .models import CustomUser, Profile, UserEmailVerification, PostMedia, Post, Comment, Hashtag, Notification, Wallet, Referral, Order, Payout
+from .models import CustomUser, Profile, UserEmailVerification, PostMedia, Post, Comment, Hashtag, Notification, Wallet, Referral, Order, Payout, Listing, Webhook
 from .utils import send_verification_email, generate_video_thumbnail, extract_hashtags, extract_mentions, send_notification
 from .tasks import process_post_media
 import uuid
+import requests
+import json
+from django.db import transaction
+
+def trigger_webhooks(event_name, data):
+    hooks = Webhook.objects.filter(event=event_name, is_active=True)
+    for hook in hooks:
+        try:
+            # In production, this should be a Celery task
+            requests.post(hook.url, json={
+                'event': event_name,
+                'data': data,
+                'timestamp': uuid.uuid4().hex # Using uuid for idempotency/request id
+            }, timeout=3)
+        except:
+            pass
 
 @receiver(post_save, sender=CustomUser)
 def create_user_related_models(sender, instance, created, **kwargs):
@@ -16,6 +32,12 @@ def create_user_related_models(sender, instance, created, **kwargs):
         Wallet.objects.create(user=instance)
         UserEmailVerification.objects.create(user=instance)
         send_verification_email(instance)
+        trigger_webhooks('user.registered', {'id': instance.id, 'username': instance.username})
+
+@receiver(post_save, sender=Listing)
+def trigger_listing_webhook(sender, instance, created, **kwargs):
+    if created:
+        trigger_webhooks('listing.created', {'id': instance.id, 'title': instance.title, 'price': str(instance.price)})
 
 @receiver(post_save, sender=CustomUser)
 def save_user_related_models(sender, instance, **kwargs):
@@ -95,7 +117,11 @@ def process_comment_content(sender, instance, **kwargs):
 
 @receiver(post_save, sender=Order)
 def handle_order_payout_and_referral(sender, instance, created, **kwargs):
+    if created:
+        trigger_webhooks('order.created', {'id': instance.id, 'amount': str(instance.amount)})
+    
     if instance.status == 'completed':
+        trigger_webhooks('order.completed', {'id': instance.id, 'amount': str(instance.amount)})
         # 1. Check for Referral Reward
         # Reward referrer when referred user makes their first sale
         seller = instance.seller

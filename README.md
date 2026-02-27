@@ -75,4 +75,4 @@ The admin dashboard is enhanced with:
 The API is built using **Django Rest Framework**.
 Check the `/api/` endpoints for full CRUD capabilities.
 
-*Designed with 💜 by Antigravity AI.*
+*Designed with 💜 by BAKHTI Daoud.*

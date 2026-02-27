@@ -1,0 +1,81 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+  @media print {
+
+    #header,
+    #changelist-filter,
+    .breadcrumbs,
+    .btn-print {
+      display: none !important;
+    }
+
+    .chart-container {
+      border: none !important;
+      box-shadow: none !important;
+    }
+  }
+
+  .report-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+  }
+
+  .report-table th,
+  .report-table td {
+    border: 1px solid #e5e7eb;
+    padding: 12px;
+    text-align: right;
+  }
+
+  .report-table th {
+    background: #f9fafb;
+    text-align: center;
+  }
+
+  .report-table td:first-child {
+    text-align: left;
+    font-weight: 600;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <h1>{{ title }}</h1>
+    <button onclick="window.print()" class="btn btn-print" style="background: #111827; color: white;">Generate PDF
+      (Print)</button>
+  </div>
+  <p>Report generated on: {{ date }}</p>
+
+  <div class="chart-container">
+    <table class="report-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>New Users</th>
+          <th>Total Revenue</th>
+          <th>Listings</th>
+          <th>Orders</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for agg in aggregates %}
+        <tr>
+          <td>{{ agg.date }}</td>
+          <td>{{ agg.new_users }}</td>
+          <td>${{ agg.revenue }}</td>
+          <td>{{ agg.new_listings }}</td>
+          <td>{{ agg.new_orders }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

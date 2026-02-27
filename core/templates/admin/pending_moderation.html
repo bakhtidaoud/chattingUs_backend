@@ -1,35 +1,39 @@
 {% extends "admin/base_site.html" %}
-{% load i18n static %}
-
 {% block extrahead %}
 {{ block.super }}
 <style>
+  .moderation-wrapper {
+    animation: fadeIn 0.5s ease-out;
+  }
+
   .moderation-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 24px;
-    padding: 20px 0;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 32px;
+    margin-top: 32px;
   }
 
   .listing-card {
-    background: #fff;
-    border-radius: 16px;
+    background: var(--glass);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
     overflow: hidden;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     flex-direction: column;
-    transition: transform 0.2s;
-    border: 1px solid #f3f4f6;
   }
 
   .listing-card:hover {
-    transform: translateY(-4px);
+    transform: translateY(-8px);
+    border-color: var(--primary);
+    box-shadow: 0 20px 40px -20px rgba(99, 102, 241, 0.4);
   }
 
   .listing-image-container {
-    height: 200px;
-    background: #f3f4f6;
+    height: 220px;
     position: relative;
+    overflow: hidden;
     cursor: pointer;
   }
 
@@ -37,164 +41,157 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transition: 0.5s;
+  }
+
+  .listing-card:hover .listing-image {
+    transform: scale(1.1);
+  }
+
+  .price-tag {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: var(--primary);
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 0.85rem;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
   }
 
   .listing-info {
-    padding: 16px;
+    padding: 24px;
     flex-grow: 1;
   }
 
   .listing-title {
-    font-size: 1.1rem;
-    font-weight: 700;
+    font-size: 1.25rem;
+    font-weight: 800;
     margin-bottom: 8px;
-    color: #111827;
+    color: #fff;
+    letter-spacing: -0.02em;
   }
 
   .listing-meta {
-    font-size: 0.85rem;
-    color: #6b7280;
-    margin-bottom: 12px;
-  }
-
-  .listing-price {
-    font-weight: 700;
-    color: #6366f1;
+    font-size: 0.8rem;
+    color: var(--text-muted);
     margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   .listing-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    padding: 16px;
-    background: #f9fafb;
-    border-top: 1px solid #f3f4f6;
-  }
-
-  .btn {
-    padding: 10px;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    border: none;
-    transition: opacity 0.2s;
-    font-size: 0.875rem;
+    gap: 16px;
+    padding: 24px;
+    background: rgba(255, 255, 255, 0.02);
+    border-top: 1px solid var(--glass-border);
   }
 
   .btn-approve {
-    background: #10b981;
-    color: white;
+    background: #10b981 !important;
   }
 
   .btn-reject {
-    background: #ef4444;
-    color: white;
+    background: #f43f5e !important;
   }
 
-  .btn:hover {
-    opacity: 0.9;
-  }
-
-  /* Modal Styles */
+  /* Modal */
   #imageModal {
     display: none;
     position: fixed;
     z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.9);
-    backdrop-filter: blur(4px);
+    inset: 0;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(12px);
   }
 
   .modal-content {
+    max-width: 90%;
+    max-height: 85vh;
     margin: auto;
     display: block;
-    width: 80%;
-    max-width: 700px;
-    max-height: 80vh;
-    object-fit: contain;
-    position: relative;
-    top: 50%;
-    transform: translateY(-50%);
-  }
-
-  .close-modal {
-    position: absolute;
-    top: 20px;
-    right: 35px;
-    color: #f1f1f1;
-    font-size: 40px;
-    font-weight: bold;
-    cursor: pointer;
+    border-radius: 20px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div id="content-main">
-  <h1>Pending Moderation Tasks</h1>
-  <p>Review new listings before they go live.</p>
+<div class="moderation-wrapper">
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+      <h1 style="margin:0;">Visual Moderation Hub</h1>
+      <p style="color: var(--text-muted); margin-top: 4px;">Reviewing new inventory entry requests</p>
+    </div>
+    <div style="display: flex; gap: 12px;">
+      <div style="text-align: right;">
+        <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Pending
+          Review</div>
+        <div style="font-size: 1.25rem; font-weight: 800; color: var(--primary);">{{ listings|length }} Records</div>
+      </div>
+    </div>
+  </div>
 
   {% if listings %}
   <div class="moderation-grid">
     {% for listing in listings %}
     <div class="listing-card" id="listing-{{ listing.id }}">
-      <div class="listing-image-container"
-        onclick="openModal('{{ listing.media.first.file.url|default:'https://via.placeholder.com/400x300?text=No+Image' }}')">
-        <img src="{{ listing.media.first.file.url|default:'https://via.placeholder.com/400x300?text=No+Image' }}"
+      <div class="listing-image-container" onclick="openModal('{{ listing.media.first.file.url|default:"
+        https://via.placeholder.com/600x400?text=No+Entity+Media" }}')">
+        <img src='{{ listing.media.first.file.url|default:"https://via.placeholder.com/600x400?text=No+Entity+Media" }}'
           class="listing-image">
+        <div class="price-tag">
+          {% if listing.price %}${{ listing.price }}{% else %}N/A{% endif %}
+        </div>
       </div>
       <div class="listing-info">
         <div class="listing-title">{{ listing.title }}</div>
         <div class="listing-meta">
-          By: <strong>{{ listing.user.username }}</strong><br>
-          Category: {{ listing.category.name }}
+          <i data-lucide="user" width="14"></i> {{ listing.user.username }}
+          <span style="opacity: 0.3;">|</span>
+          <i data-lucide="tag" width="14"></i> {{ listing.category.name }}
         </div>
-        <div class="listing-price">
-          {% if listing.price %}${{ listing.price }}{% else %}Free / Contact{% endif %}
-        </div>
-        <p style="font-size: 0.9rem; color: #4b5563;">{{ listing.description|truncatewords:20 }}</p>
+        <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.6;">{{
+          listing.description|truncatewords:20 }}</p>
       </div>
       <div class="listing-actions">
-        <button class="btn btn-approve" onclick="moderateListing({{ listing.id }}, 'approve')">Approve</button>
-        <button class="btn btn-reject" onclick="moderateListing({{ listing.id }}, 'reject')">Reject</button>
+        <button class="button btn-approve" onclick="moderateListing({{ listing.id }}, 'approve')">Approve</button>
+        <button class="button btn-reject" onclick="moderateListing({{ listing.id }}, 'reject')">Reject</button>
       </div>
     </div>
     {% endfor %}
   </div>
   {% else %}
-  <div style="text-align: center; padding: 40px; background: white; border-radius: 12px;">
-    <h2 style="color: #6b7280;">🎉 All caught up!</h2>
-    <p>No listings are currently waiting for review.</p>
+  <div
+    style="text-align: center; padding: 100px; background: var(--glass); border-radius: 32px; border: 1px dashed var(--glass-border); margin-top: 40px;">
+    <i data-lucide="check-circle-2" style="width: 64px; height: 64px; color: #10b981; margin-bottom: 24px;"></i>
+    <h2 style="color: #fff; margin-bottom: 8px;">Integrity Check Complete</h2>
+    <p style="color: var(--text-muted);">All new inventory records have been processed. No pending tasks found.</p>
   </div>
   {% endif %}
 </div>
 
-<!-- Modal for quick view -->
-<div id="imageModal">
-  <span class="close-modal">&times;</span>
-  <img class="modal-content" id="modalImg">
+<!-- Quick View Modal -->
+<div id="imageModal" onclick="this.style.display='none'">
+  <span
+    style="position: absolute; top: 30px; right: 40px; color: #fff; font-size: 40px; cursor: pointer;">&times;</span>
+  <img class="modal-content" id="modalImg" style="position: relative; top: 50%; transform: translateY(-50%);">
 </div>
 
 <script>
+  lucide.createIcons();
+
   function openModal(url) {
+    event.stopPropagation();
     const modal = document.getElementById("imageModal");
     const modalImg = document.getElementById("modalImg");
     modal.style.display = "block";
     modalImg.src = url;
-  }
-
-  document.querySelector('.close-modal').onclick = function () {
-    document.getElementById("imageModal").style.display = "none";
-  }
-
-  window.onclick = function (event) {
-    if (event.target == document.getElementById("imageModal")) {
-      document.getElementById("imageModal").style.display = "none";
-    }
   }
 
   function moderateListing(id, action) {
@@ -203,6 +200,10 @@
     formData.append('action', action);
     formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
 
+    const card = document.getElementById(`listing-${id}`);
+    card.style.transform = 'scale(0.95)';
+    card.style.opacity = '0.5';
+
     fetch('', {
       method: 'POST',
       body: formData
@@ -210,14 +211,18 @@
       .then(response => response.json())
       .then(data => {
         if (data.status === 'success') {
-          const card = document.getElementById(`listing-${id}`);
           card.style.opacity = '0';
+          card.style.transform = 'scale(0.5)';
           setTimeout(() => {
             card.remove();
             if (document.querySelectorAll('.listing-card').length === 0) {
               location.reload();
             }
           }, 300);
+        } else {
+          card.style.opacity = '1';
+          card.style.transform = 'scale(1)';
+          alert('Operation failed: System record mismatch.');
         }
       });
   }

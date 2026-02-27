@@ -4,4 +4,5 @@ from . import consumers, admin_consumers
 websocket_urlpatterns = [
     re_path(r'ws/chat/(?P<conversation_id>\w+)/$', consumers.ChatConsumer.as_asgi()),
     re_path(r'ws/admin/analytics/$', admin_consumers.AdminAnalyticsConsumer.as_asgi()),
+    re_path(r'ws/admin/presence/(?P<resource_id>[\w\-]+)/$', admin_consumers.PresenceConsumer.as_asgi()),
 ]

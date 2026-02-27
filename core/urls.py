@@ -14,6 +14,7 @@ from .views import (
     MessageSearchView, NotificationSettingViewSet, SubscriptionPlanViewSet,
     UserSubscriptionViewSet, WalletViewSet, PayoutViewSet, ReferralViewSet
 )
+from .web_views import dashboard_view, chat_view, saved_searches_view
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
@@ -68,4 +69,9 @@ urlpatterns = [
     path('2fa/disable/', Disable2FAView.as_view(), name='disable_2fa'),
     path('2fa/backup-codes/', StaticBackupCodesView.as_view(), name='backup_codes'),
     path('messages/search/', MessageSearchView.as_view(), name='message_search'),
+    
+    # Web Frontend Routes
+    path('web/dashboard/', dashboard_view, name='web_dashboard'),
+    path('web/chat/', chat_view, name='web_chat'),
+    path('web/saved-searches/', saved_searches_view, name='web_saved_searches'),
 ]
