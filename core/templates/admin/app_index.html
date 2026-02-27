@@ -1,0 +1,54 @@
+{% extends "admin/index.html" %}
+{% load i18n static %}
+
+{% block content %}
+<div id="content-main">
+  <div style="margin-bottom: 40px; display: flex; align-items: center; gap: 16px;">
+    <div
+      style="background: var(--primary); width: 48px; height: 48px; border-radius: 16px; display: flex; align-items: center; justify-content: center; color: #fff;">
+      <i data-lucide="layers" width="24"></i>
+    </div>
+    <div>
+      <h1 style="margin:0;">{{ app_label|title }} Application</h1>
+      <p style="color: var(--text-muted); margin-top: 4px;">Direct access to {{ app_label }} infrastructure models</p>
+    </div>
+  </div>
+
+  {% if app_list %}
+  {% for app in app_list %}
+  <div class="module-card">
+    <h2>Model Entities</h2>
+    <table>
+      {% for model in app.models %}
+      <tr>
+        <th scope="row" style="width: 60%;">
+          {% if model.admin_url %}
+          <a href="{{ model.admin_url }}" style="color: #fff; text-decoration: none; font-weight: 500;">{{ model.name
+            }}</a>
+          {% else %}
+          {{ model.name }}
+          {% endif %}
+        </th>
+        <td style="text-align: right;">
+          {% if model.add_url %}
+          <a href="{{ model.add_url }}"
+            style="color: var(--primary); text-decoration: none; font-size: 0.8rem; font-weight: 700;">+ ADD</a>
+          {% endif %}
+        </td>
+        <td style="text-align: right;">
+          {% if model.admin_url %}
+          <a href="{{ model.admin_url }}"
+            style="color: var(--text-muted); text-decoration: none; font-size: 0.8rem;">VIEW ALL</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% endfor %}
+  {% endif %}
+</div>
+<script>
+  lucide.createIcons();
+</script>
+{% endblock %}
